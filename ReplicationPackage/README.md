@@ -14,7 +14,7 @@ The overall steps are
 
 ## Get the Database
 
-1) Restore the backup of the data into MS Sql Server. For each studied project there is a separate database. You can select individual files from the [db backup](https://www.dropbox.com/home/SofiaWL-Data). Note, some files are over 15GB.
+1) Restore the backup of the data into MS Sql Server. For each studied project there is a separate database. You can select individual files from the [db backup](https://www.dropbox.com/home/SofiaWL-Databases). Note, some files are over 15GB.
 2) Copy the [configuration files](config).
 3) Open and modify each configuration file to set the connection string. You need to provide the server address along with the credentials. The following snippet shows a sample of how connection string should be set.
 
