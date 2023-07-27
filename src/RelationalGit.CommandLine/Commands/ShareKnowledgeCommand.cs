@@ -324,9 +324,8 @@ namespace RelationalGit.Commands
                             startDate = startDate.AddDays(1);
                         }
 
-
-                    }
                 }
+            }
                 _dbContext.BulkInsert(bulkDeveloperOpenReviews, new BulkConfig { BatchSize = 5000000, BulkCopyTimeout=140000000});
 
             }
@@ -357,6 +356,7 @@ namespace RelationalGit.Commands
                 StartDateTime = DateTime.Now,
                 MegaPullRequestSize = lossSimulationOption.MegaPullRequestSize,
                 KnowledgeShareStrategyType = lossSimulationOption.KnowledgeShareStrategyType,
+                SimulationType = lossSimulationOption.SimulationType,
                 LeaversType = lossSimulationOption.LeaversType,
                 FilesAtRiksOwnershipThreshold = lossSimulationOption.FilesAtRiksOwnershipThreshold,
                 FilesAtRiksOwnersThreshold = lossSimulationOption.FilesAtRiksOwnersThreshold,
@@ -392,7 +392,8 @@ namespace RelationalGit.Commands
                 lossSimulation.PullRequestReviewerSelectionStrategy,
                 lossSimulation.AddOnlyToUnsafePullrequests,
                 lossSimulation.RecommenderOption,
-                lossSimulation.ChangePast);
+                lossSimulation.ChangePast,
+                lossSimulation.SimulationType);
 
             var timeMachine = new TimeMachine(knowledgeShareStrategy, _logger);
 

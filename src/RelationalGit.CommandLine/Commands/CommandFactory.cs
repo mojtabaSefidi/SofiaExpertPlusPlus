@@ -163,6 +163,7 @@ namespace RelationalGit.Commands
                 var lossSimulationOption = new LossSimulationOption()
                 {
                     KnowledgeShareStrategyType = options.KnowledgeSaveStrategyType,
+                    SimulationType = options.SimulationType,
                     KnowledgeSaveReviewerReplacementType = options.KnowledgeSaveReviewerReplacementType,
                     MegaPullRequestSize = options.MegaPullRequestSize.Value,
                     LeaversType = options.LeaversType,

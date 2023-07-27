@@ -78,7 +78,7 @@ namespace RelationalGit.Simulation
                 return;
 
 
-            _mapReviews.Add(reviewerName + pullRequest.Number);
+            _mapReviews.Add(reviewerName + pullRequest.Number)  ;
 
             if (!_mapDeveloperReview.ContainsKey(reviewerName))
             {

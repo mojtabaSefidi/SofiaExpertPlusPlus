@@ -6,6 +6,8 @@ namespace RelationalGit
     {
         public string KnowledgeShareStrategyType { get; internal set; }
 
+        public string SimulationType { get; internal set; }
+
         public string KnowledgeSaveReviewerReplacementType { get; internal set; }
 
         public int MegaPullRequestSize { get; internal set; }

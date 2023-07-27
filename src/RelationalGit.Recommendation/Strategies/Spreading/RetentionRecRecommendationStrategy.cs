@@ -13,8 +13,9 @@ namespace RelationalGit.Recommendation
             string pullRequestReviewerSelectionStrategy, 
             bool? addOnlyToUnsafePullrequests,
             string recommenderOption,
-            bool changePast)
-            : base(knowledgeSaveReviewerReplacementType, logger, pullRequestReviewerSelectionStrategy, addOnlyToUnsafePullrequests,recommenderOption,changePast)
+            bool changePast,
+            string simulationType)
+            : base(knowledgeSaveReviewerReplacementType, logger, pullRequestReviewerSelectionStrategy, addOnlyToUnsafePullrequests,recommenderOption,changePast, simulationType)
         {
             _numberOfPeriodsForCalculatingProbabilityOfStay = numberOfPeriodsForCalculatingProbabilityOfStay;
         }

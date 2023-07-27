@@ -8,8 +8,8 @@ namespace RelationalGit.Recommendation
 {
     public abstract class SpreadingKnowledgeShareStrategyBase : RecommendationStrategy
     {
-        public SpreadingKnowledgeShareStrategyBase(string knowledgeSaveReviewerReplacementType, ILogger logger,bool changePast)
-            : base(knowledgeSaveReviewerReplacementType, logger,changePast)
+        public SpreadingKnowledgeShareStrategyBase(string knowledgeSaveReviewerReplacementType, ILogger logger,bool changePast, string simulationType)
+            : base(knowledgeSaveReviewerReplacementType, logger,changePast, simulationType)
         {
         }
 

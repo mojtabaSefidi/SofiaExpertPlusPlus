@@ -814,7 +814,7 @@ namespace RelationalGit.Calculation
             public double Average => Results.Select(q => q.Value).Average();
         }
         public class OpenReviewResult
-        {
+        {   
             public LossSimulation LossSimulation { get; set; }
 
             public List<int> Results { get; set; } = new List<int>();

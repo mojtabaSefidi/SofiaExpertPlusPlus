@@ -13,12 +13,13 @@ namespace RelationalGit.Recommendation
         private double _beta;
         private int _riskOwenershipThreshold;
         private double _hoarderRatio;
+        private ILogger _logger;
         public WhoDoRecommendationStrategy(string knowledgeSaveReviewerReplacementType,
             ILogger logger, int? numberOfPeriodsForCalculatingProbabilityOfStay,
             string pullRequestReviewerSelectionStrategy,
             bool? addOnlyToUnsafePullrequests,
-            string recommenderOption, bool changePast)
-            : base(knowledgeSaveReviewerReplacementType, logger, pullRequestReviewerSelectionStrategy, addOnlyToUnsafePullrequests, recommenderOption, changePast)
+            string recommenderOption, bool changePast, string simulationType)
+            : base(knowledgeSaveReviewerReplacementType, logger, pullRequestReviewerSelectionStrategy, addOnlyToUnsafePullrequests, recommenderOption, changePast, simulationType)
         {
             _numberOfPeriodsForCalculatingProbabilityOfStay = numberOfPeriodsForCalculatingProbabilityOfStay;
 
@@ -27,6 +28,7 @@ namespace RelationalGit.Recommendation
             _beta = parameters.Beta;
             _riskOwenershipThreshold = parameters.RiskOwenershipThreshold;
             _hoarderRatio = parameters.HoarderRatio;
+            _logger = logger;
         }
 
         private double ComputeCommitScore(PullRequestContext pullRequestContext, string filePath, DeveloperKnowledge reviewer)
@@ -85,7 +87,7 @@ namespace RelationalGit.Recommendation
             double? neighber_commit_score = 0.0;
             double? neighber_review_score = 0.0;
 
-            foreach (var pullRequestFile in pullRequestContext.PullRequestFiles)
+           foreach (var pullRequestFile in pullRequestContext.PullRequestFiles)
             {
                 var canonicalPath = pullRequestContext.CanononicalPathMapper.GetValueOrDefault(pullRequestFile.FileName);
                 if (canonicalPath == null)
@@ -106,11 +108,10 @@ namespace RelationalGit.Recommendation
                 }
             }
             double loadscore = GetLoadScore(pullRequestContext, reviewer);
-            var load = Math.Pow(Math.E, (0.5 * loadscore));
-
+            // _logger.LogInformation("loadscore: {loadscore}", loadscore);
+            var load = Math.Pow(Math.E, (0.5 * loadscore)); // print it
             double final_score = Convert.ToDouble(review_score + commit_score + neighber_commit_score + neighber_review_score) / load;
             double final_score_noload = Convert.ToDouble(review_score + commit_score + neighber_commit_score + neighber_review_score);
-
             return final_score;
 
         }
@@ -126,8 +127,8 @@ namespace RelationalGit.Recommendation
             {
                 reviwes.Add(pullreq.Number);
             }
-            var count = overitems.Intersect(reviwes);
-            return count.Count();
+           var count = overitems.Intersect(reviwes);
+           return count.Count();
         }
 
         private (double Alpha, double Beta, int RiskOwenershipThreshold, double HoarderRatio) GetParameters(string recommenderOption)

@@ -10,10 +10,13 @@ namespace RelationalGit.Simulation
 
         protected bool ChangePast { get; private set; }
 
-        public RecommendationStrategy(string knowledgeSaveReviewerReplacementType, ILogger logger,bool changePast)
+        protected string SimulationType { get; private set; }
+
+        public RecommendationStrategy(string knowledgeSaveReviewerReplacementType, ILogger logger,bool changePast, string simulationType)
         {
             ReviewerReplacementStrategyType = knowledgeSaveReviewerReplacementType;
             ChangePast = changePast;
+            SimulationType = simulationType;
         }
 
         internal PullRequestRecommendationResult Recommend(PullRequestContext pullRequestContext)

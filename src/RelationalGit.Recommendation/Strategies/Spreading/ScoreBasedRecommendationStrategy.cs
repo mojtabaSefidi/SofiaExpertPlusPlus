@@ -24,8 +24,10 @@ namespace RelationalGit.Recommendation
             string pullRequestReviewerSelectionStrategy,
             bool? addOnlyToUnsafePullrequests,
             string recommenderOption,
-            bool changePast)
-            : base(knowledgeSaveReviewerReplacementType, logger,changePast)
+            bool changePast,
+            string simulationType)
+            : base(knowledgeSaveReviewerReplacementType, logger,changePast, simulationType)
+            
         {
             _logger = logger;
 
@@ -128,7 +130,7 @@ namespace RelationalGit.Recommendation
                 result.Add((newReviewerSet, selectedCandidates));
                
             }
-            if (ShouldReplaceReviewer(pullRequestContext, strategies))
+            if (ShouldReplaceReviewer(pullRequestContext, strategies) || (ShouldFarReplaceReviewer(pullRequestContext, strategies)))
             {
                 var selectedCandidatesLength = GetSelectedCandidatesLength(pullRequestContext, strategies, "replace");
                 var numberOfReplacements = Math.Min(availableDevs.Length, selectedCandidatesLength);
@@ -137,10 +139,70 @@ namespace RelationalGit.Recommendation
                 var actualReviewersCombination = GetCombinations(actualReviewersLength, numberOfReplacements);
 
                 var reviewerSet = new HashSet<string>();
-
+                var PRID = pullRequestContext.PullRequest.Number;
                 if (IsRandomReplacement(pullRequestContext, strategies))
                 {
-                    var selectedActualCombination = actualReviewersCombination.ElementAt(_rnd.Next(0, actualReviewersCombination.Count()));
+                    
+                    var selectedActualCombination = new int[1];
+                    if (SimulationType == "Random")
+                    {
+                        _logger.LogInformation("Random: {SimulationType}", SimulationType);
+                        selectedActualCombination = actualReviewersCombination.ElementAt(_rnd.Next(0, actualReviewersCombination.Count()));
+                    }
+
+                    if (SimulationType == "SeededRandom")
+                    {
+                        _logger.LogInformation("Fixed: {SimulationType}", SimulationType);
+                        using (var dbContext = GetDbContext())
+                        {
+                            var cHRevId = dbContext.LossSimulations.Where(q => q.KnowledgeShareStrategyType == "cHRev")
+                                .OrderByDescending(q => q.StartDateTime)
+                                .Select(q => new { q.Id })
+                                .First().Id;
+
+
+                            var actualRecommendationResults = dbContext.PullRequestRecommendationResults.Where(q => q.LossSimulationId == cHRevId && q.ActualReviewersLength > 0)
+                                .Select(q => new { q.SelectedReviewers, q.ActualReviewers, q.SortedCandidates, q.PullRequestNumber });
+
+                            int[] indexArray = new int[1];
+                            indexArray[0] = -1;
+                            if (actualReviewersCombination.Count() > 1)
+                            {
+                                string SelectedReviewers = actualRecommendationResults.Where(result => result.PullRequestNumber == PRID).First().SelectedReviewers;
+                                string actualReviewers = actualRecommendationResults.Where(result => result.PullRequestNumber == PRID).First().ActualReviewers;
+                                string[] actualReviewersArray = actualReviewers.Split(", ");
+                                string[] SelectedReviewersArray = SelectedReviewers.Split(", ");
+
+                                var replacedReviewer = actualReviewersArray.Where(x => !SelectedReviewersArray.Contains(x)).ToArray();
+
+                                string[] actualList = new string[pullRequestContext.ActualReviewers.Count()];
+                                var index = 0;
+                                foreach (var rev in pullRequestContext.ActualReviewers)
+                                {
+                                    actualList[index] = rev.DeveloperName;
+                                    index += 1;
+                                }
+                                indexArray[0] = Array.IndexOf(actualList, replacedReviewer.FirstOrDefault());
+
+                                if (indexArray[0] == -1)
+                                {
+                                    var SortedCandidates = actualRecommendationResults.Where(result => result.PullRequestNumber == PRID).First().SortedCandidates;
+                                    if (SortedCandidates != null)
+                                    {
+                                        var TopCandidate = SortedCandidates.Split(", ").ToArray().FirstOrDefault();
+                                        // _logger.LogInformation("TopCandidate: {TopCandidate}", TopCandidate);
+                                        indexArray[0] = Array.IndexOf(actualList, TopCandidate.ToString());
+                                        // _logger.LogInformation("replacedReviewer***: {replacedReviewerIndex}", indexArray[0]);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                indexArray[0] = 0;
+                            }
+                            selectedActualCombination = indexArray;
+                        }
+                    }
 
                     var replacement = Replace(numberOfReplacements, actualReviewersLength, selectedActualCombination, pullRequestContext, availableDevs);
 
@@ -226,7 +288,6 @@ namespace RelationalGit.Recommendation
             }
 
             var newReviewerSet = fixedReviewers.Concat(selectedCandidates);
-
             return (newReviewerSet,selectedCandidates);
         }
 
@@ -259,14 +320,22 @@ namespace RelationalGit.Recommendation
 
             if (strategies.Length == 0)
             {
+                result = _pullRequestReviewerSelectionDefaultStrategy.Action.Contains("random");
+            }
+            else
+            {
+                result = strategies.Any(q => q.Action == "replacerandom" || q.Action == "farreplacerandom");
+            }
+
+            return result;
+            /* if (strategies.Length == 0)
+            {
                 result = _pullRequestReviewerSelectionDefaultStrategy.Action == "replacerandom";
             }
             else
             {
                 result = strategies.Any(q => q.Action == "replacerandom");
-            }
-
-            return result;
+            } */
         }
 
         private bool ShouldReplaceReviewer(PullRequestContext pullRequestContext, PullRequestReviewerSelectionStrategy[] strategies)
@@ -284,6 +353,26 @@ namespace RelationalGit.Recommendation
             else
             {
                 result = strategies.Any(q => q.Action.StartsWith("replace"));
+            }
+
+            return result;
+        }
+
+        private bool ShouldFarReplaceReviewer(PullRequestContext pullRequestContext, PullRequestReviewerSelectionStrategy[] strategies)
+        {
+
+            if (pullRequestContext.ActualReviewers.Length == 0)
+                return false;
+
+            var result = false;
+
+            if (strategies.Length == 0)
+            {
+                result = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("farreplace");
+            }
+            else
+            {
+                result = strategies.Any(q => q.Action.StartsWith("farreplace"));
             }
 
             return result;
@@ -344,6 +433,11 @@ namespace RelationalGit.Recommendation
                     }
                 }
             }
+        }
+
+        private static GitRepositoryDbContext GetDbContext()
+        {
+            return new GitRepositoryDbContext(autoDetectChangesEnabled: false);
         }
     }
 }

@@ -9,6 +9,8 @@ namespace RelationalGit.Data
 
         public string KnowledgeShareStrategyType { get; set; }
 
+        public string SimulationType { get; set; }
+
         public int MegaPullRequestSize { get; set; }
 
         public double FileAbandoningThreshold { get; set; }
