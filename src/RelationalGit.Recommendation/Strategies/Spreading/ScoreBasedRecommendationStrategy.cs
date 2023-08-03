@@ -190,9 +190,8 @@ namespace RelationalGit.Recommendation
                                     if (SortedCandidates != null)
                                     {
                                         var TopCandidate = SortedCandidates.Split(", ").ToArray().FirstOrDefault();
-                                        // _logger.LogInformation("TopCandidate: {TopCandidate}", TopCandidate);
                                         indexArray[0] = Array.IndexOf(actualList, TopCandidate.ToString());
-                                        // _logger.LogInformation("replacedReviewer***: {replacedReviewerIndex}", indexArray[0]);
+                                       
                                     }
                                 }
                             }
