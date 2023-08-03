@@ -146,13 +146,11 @@ namespace RelationalGit.Recommendation
                     var selectedActualCombination = new int[1];
                     if (SimulationType == "Random")
                     {
-                        _logger.LogInformation("Random: {SimulationType}", SimulationType);
                         selectedActualCombination = actualReviewersCombination.ElementAt(_rnd.Next(0, actualReviewersCombination.Count()));
                     }
 
                     if (SimulationType == "SeededRandom")
                     {
-                        _logger.LogInformation("Fixed: {SimulationType}", SimulationType);
                         using (var dbContext = GetDbContext())
                         {
                             var cHRevId = dbContext.LossSimulations.Where(q => q.KnowledgeShareStrategyType == "cHRev")

@@ -30,7 +30,6 @@ namespace RelationalGit.Commands
                      var startdate = pullrequest.CreatedAtDateTime;
                      var enddate = pullrequest.ClosedAtDateTime;
                      var overlap = pullRequests.Where(a => a.ClosedAtDateTime > startdate && a.CreatedAtDateTime < enddate && a.Number != pullrequest.Number).ToList();
-                    _logger.LogInformation("PRID: {PRID}", pullrequest.Number);
                     foreach (PullRequest item in overlap)
                         {
                             if (item.Number > pullrequest.Number)
