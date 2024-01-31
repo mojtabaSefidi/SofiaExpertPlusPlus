@@ -83,13 +83,15 @@ dotnet-rgit --cmd analyze-simulations --analyze-result-path "path_to_result" --n
 
 ### Simulation RQ2, Ownership Aware: Does recommending reviewers based on code and review file ownership reduce the number of files at risk to turnover?
 
+**Note**: In order to select between Random and SeededRandom use the --simulation-type command. If you want to run the seeded version, set the value of --simulation-type to Random for cHRev and all the other algorithms to "SeededRandom". If you wish to run the random version, set the value of --simulation-type to Random for all the algorithms.
+
 ```PowerShell
 # AuthorshipRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy AuthorshipRec --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy AuthorshipRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 # RevOwnRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy RecOwnRec  --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy RecOwnRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 # cHRev Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy cHRev --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy cHRev --simulation-type "Random" --conf-path <path_to_config_file>
 ```
 
 ---
@@ -98,13 +100,13 @@ dotnet-rgit --cmd simulate-recommender --recommendation-strategy cHRev --conf-pa
 
 ```PowerShell
 # LearnRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy LearnRec  --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy LearnRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 # RetentionRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy RetentionRec  --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy RetentionRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 # TurnoverRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 # Sofia Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy sofia  --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy sofia --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 ```
 
 ---
@@ -122,7 +124,7 @@ To calculate the Gini of the actual review workload run [ActualWorkload.r](Workl
 
 ```PowerShell
 #WhoDo recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy WhoDo  --conf-path <path_to_config_file>
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy WhoDo --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 
 ```
 ---
