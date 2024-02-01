@@ -4,7 +4,7 @@ The overall steps are
 
 1. Install Relational Git
 2. Get the Database
-3. Run the Simulations
+3. Run the Simulations (seeded random or random). Please see the TSE paper for more details on why we used seeded random.
 4. Dump the Simulation Data to CSV
 5. Calculate the Expertise, Workload, and FaR measures
 
