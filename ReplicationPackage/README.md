@@ -95,19 +95,32 @@ dotnet-rgit --cmd simulate-recommender --recommendation-strategy SofiaWL --simul
 
 ---
 
-### Simulation RQ2, Ownership Aware: Does recommending reviewers based on code and review file ownership reduce the number of files at risk to turnover?
+### Simulation RQ2, Recommenders++: How does adding a reviewer on PRKRs impact the turnover risk and the amount of extra reviewing work?
 
-**Note**: In order to select between Random and SeededRandom use the --simulation-type command. If you want to run the seeded version, set the value of --simulation-type to Random for cHRev and all the other algorithms to "SeededRandom". If you wish to run the random version, set the value of --simulation-type to Random for all the algorithms.
+To run the Recommenders++ strategy, you should apply the following changes to the config file of each project.
 
-```PowerShell
-# AuthorshipRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy AuthorshipRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
-# RevOwnRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy RecOwnRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
-# cHRev Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy cHRev --simulation-type "Random" --conf-path <path_to_config_file>
+```
+"PullRequestReviewerSelectionStrategy" : "0:nothing-nothing,-:add-1",
 ```
 
+In the next step, simulate each recommender. Since the Recommenders++ strategy suggests an extra reviewer for all PRKRs and doesn't do any replacement, there is no need to use the ```--simulation-type``` command.
+
+```PowerShell
+# AuthorshipRec++ Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy AuthorshipRec --conf-path <path_to_config_file>
+# RevOwnRec++ Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy RevOwnRec --conf-path <path_to_config_file>
+# cHRev++ Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy cHRev --conf-path <path_to_config_file>
+# LearnRec++ Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy LearnRec --conf-path <path_to_config_file>
+# RetentionRec++ Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy RetentionRec --conf-path <path_to_config_file>
+# TurnoverRec++ Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --conf-path <path_to_config_file>
+# WhoDo++ recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy WhoDo --conf-path <path_to_config_file>
+```
 ---
 
 ### Simulation RQ3, Turnover Aware: Can we reduce the number of files at risk to turnover by developing learning and retention aware review recommenders?
