@@ -97,7 +97,7 @@ dotnet-rgit --cmd simulate-recommender --recommendation-strategy SofiaWL --simul
 
 ### Simulation RQ2, Recommenders++: How does adding a reviewer on PRKRs impact the turnover risk and the amount of extra reviewing work?
 
-To run the Recommenders++ strategy, you should apply the following changes to the config file of each project.
+To run the Recommenders++ strategy, you should apply the following change to the config file of each project.
 
 ```
 "PullRequestReviewerSelectionStrategy" : "0:nothing-nothing,-:add-1",
@@ -123,19 +123,28 @@ dotnet-rgit --cmd simulate-recommender --recommendation-strategy WhoDo --conf-pa
 ```
 ---
 
-### Simulation RQ3, Turnover Aware: Can we reduce the number of files at risk to turnover by developing learning and retention aware review recommenders?
+### Simulation RQ3, FarAwareRec: What is the impact of adding a reviewer on abandoned files and replacing a reviewer on hoarded files for PRKRs?
 
-```PowerShell
-# LearnRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy LearnRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
-# RetentionRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy RetentionRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
-# TurnoverRec Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
-# Sofia Recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy sofia --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+To run the FarAwareRec approach, you should apply the following change to the projects' config files.
+
+```
+"PullRequestReviewerSelectionStrategy" : "0:nothing-nothing,-:addAndReplace-1",
 ```
 
+Then, you should simulate the FarAwareRec recommender for each project. The ```--simulation-type``` command forces the recommender to replace the same reviewer in all the simulations.
+
+```PowerShell
+# FaR-Aware recommender for CoreFX
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_CoreFX_config_file>
+# FaR-Aware recommender for CoreCLR
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_CoreCLR_config_file>
+# FaR-Aware recommender for Roslyn
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Roslyn_config_file>
+# FaR-Aware recommender for Rust
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Rust_config_file>
+# FaR-Aware recommender for Kubernetes
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Kubernetes_config_file>
+```
 ---
 
 ### Empirical RQ4, Review Workload: How is the review workload distributed across developers?
