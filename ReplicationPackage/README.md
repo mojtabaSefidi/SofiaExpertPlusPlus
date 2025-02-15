@@ -134,34 +134,46 @@ To run the FarAwareRec approach, you should apply the following change to the pr
 Then, you should simulate the FarAwareRec recommender for each project. The ```--simulation-type``` command forces the recommender to replace the same reviewer in all the simulations.
 
 ```PowerShell
-# FaR-Aware recommender for CoreFX
+# FarAwareRec recommender for CoreFX
 dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_CoreFX_config_file>
-# FaR-Aware recommender for CoreCLR
+# FarAwareRec recommender for CoreCLR
 dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_CoreCLR_config_file>
-# FaR-Aware recommender for Roslyn
+# FarAwareRec recommender for Roslyn
 dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Roslyn_config_file>
-# FaR-Aware recommender for Rust
+# FarAwareRec recommender for Rust
 dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Rust_config_file>
-# FaR-Aware recommender for Kubernetes
+# FarAwareRec recommender for Kubernetes
 dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Kubernetes_config_file>
 ```
 ---
 
-### Empirical RQ4, Review Workload: How is the review workload distributed across developers?
+### Simulation RQ4, HoardedXRec: Can we balance the trade-off between &#916;FaR and Reviewer++ when we recommend an extra reviewer for PRKRs?
 
-```PowerShell
-# Get each developer's number of open reviews in "day", "week", "month", "quarter", "year"
-dotnet-rgit --cmd  get-workload --analyze-type <analyze-type> --analyze-result-path "path_to_result"  --reality-simulation <reality_id>  --conf-path <path_to_config_file>
+To run the HoardedXRec strategy, you should apply the following changes to the config file of each project.
+
+```
+"PullRequestReviewerSelectionStrategy" : "0:nothing-nothing,-:addHoarded_X-1",
 ```
 
-To calculate the Gini of the actual review workload run [ActualWorkload.r](WorkloadMeasures/ActualWorkload.R). The data from the paper is available in [CSV](ResultsCSV/WorkloadAUC/Actual/) format.
+The X parameter should be adjusted based on the recommender. In our paper, we run simulations for X = {2,3,4}. For example, if you want to run the **Hoarded2Rec** recommender, you should change the config files as follows:
 
-### Simulation RQ5, Workload Aware: WhoDo is designed to be workload aware, but can it also balance Expertise, Workload, and FarR
+```
+"PullRequestReviewerSelectionStrategy" : "0:nothing-nothing,-:addHoarded_2-1",
+```
+
+After adjusting the config files for all projects, you should run the HoardedXRec approach for each project and X = {2,3,4}. 
 
 ```PowerShell
-#WhoDo recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy WhoDo --simulation-type "SeededRandom" --conf-path <path_to_config_file>
-
+# HoardedXRec recommender for CoreFX
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_CoreFX_config_file>
+# HoardedXRec recommender for CoreCLR
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_CoreCLR_config_file>
+#HoardedXRec recommender for Roslyn
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Roslyn_config_file>
+# HoardedXRec recommender for Rust
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Rust_config_file>
+# HoardedXRec recommender for Kubernetes
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_Kubernetes_config_file>
 ```
 ---
 
