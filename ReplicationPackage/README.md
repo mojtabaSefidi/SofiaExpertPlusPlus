@@ -14,9 +14,9 @@ The overall steps are
 
 ## Get the Database
 
-1) Restore the backup of the data into MS Sql Server. For each studied project there is a separate database. You can select individual files from the [db backup](https://www.dropbox.com/home/SofiaWL-Databases). Note, some files are over 15GB.
+1) Restore the backup of the data into MS SQL Server. For each studied project there is a separate database. You can select individual files from the [db backup](https://www.dropbox.com/home/SofiaWL-Databases). Note that some files are over 15GB.
 2) Copy the [configuration files](config).
-3) Open and modify each configuration file to set the connection string. You need to provide the server address along with the credentials. The following snippet shows a sample of how connection string should be set.
+3) Open and modify each configuration file to set the connection string. You need to provide the server address along with the credentials. The following snippet shows a sample of how the connection string should be set.
 
 ```json
  {
@@ -29,10 +29,10 @@ The overall steps are
  }
 ```
 
-4) Open [simulations.ps1](simulations.ps1) using an editor and make sure the config variables defined at the top of the file are reffering to the correct location of the downloaded config files. 
+4) Open [simulations.ps1](simulations.ps1) using an editor and make sure the config variables defined at the top of the file refer to the correct location of the downloaded config files. 
 
-```powershell
-# Each of the following variables contains the absolute path of the corresponding configuation file.
+```PowerShell
+# Each of the following variables contains the absolute path of the corresponding configuration file.
 $corefx_conf = "absolute/path/to/corefx_conf.json"
 $coreclr_conf = "absolute/path/to/coreclr_conf.json"
 $roslyn_conf = "absolute/path/to/roslyn_conf.json"
@@ -44,17 +44,17 @@ $kubernetes_conf = "absolute/path/to/kubernetes_conf.json"
 
 1) Run the [simulations.ps1](simulations.ps1) script. Open PowerShell and run the following command in the directory of the file
 
-``` powershell
+``` PowerShell
 ./simulations.ps1
 ```
 
-This scripts runs all the defined reviewer recommendation algorithms accross all projects. Each run is called a simulation because for each pull request one of the actual reviewers is randomly selected to be replaced by the top recommended reviewer.
+This script runs all the defined reviewer recommendation algorithms across all projects.
 
 **Note**: Make sure you have set the PowerShell [execution policy](https://superuser.com/questions/106360/how-to-enable-execution-of-powershell-scripts) to **Unrestricted** or **RemoteAssigned**.
 
 ## Research Questions
 
-In following sections, we show which simulations are used for which research questions. For each simulation, a sample is provided that illustrates how the simulation can be run using the tool.
+The following sections describe the commands needed to run simulations for each research question. For each simulation, a sample is provided that illustrates how the simulation can be run using the tool.
 
 ### Empirical RQ1, Review and Turnover: What is the reduction in files at risk to turnover when both authors and reviewers are considered knowledgeable?
 
