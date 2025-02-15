@@ -56,28 +56,42 @@ This script runs all the defined reviewer recommendation algorithms across all p
 
 The following sections describe the commands needed to run simulations for each research question. For each simulation, a sample is provided that illustrates how the simulation can be run using the tool.
 
-### Empirical RQ1, Review and Turnover: What is the reduction in files at risk to turnover when both authors and reviewers are considered knowledgeable?
+**Note:** To run the simulations for each of the following research questions, you need to change the config file of all five projects. We suggest creating an exclusive config file for each research question to avoid confusion.
 
+### Simulation RQ1, Baseline: On PRKRs, how well do existing recommenders perform??
+
+On PRKRs, To replicate the performance of recommenders at the replacement level, you should apply the following change to the config file of each project.
+
+```
+"PullRequestReviewerSelectionStrategy" : "0:nothing-nothing,-:farreplacerandom-1",
+```
+
+In this way, one of the reviewers of PRKRs will be randomly (seeded) replaced with the top-recommended candidate. Then you should run the following commands for each project to simulate the performance of recommenders.
 
 ```PowerShell
-# committers only
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy NoReviews --conf-path <path_to_config_file>
-# committers + reviewers = what happended in "Reality"
+# Reality
 dotnet-rgit --cmd simulate-recommender --recommendation-strategy Reality --conf-path <path_to_config_file>
+# cHRev Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy cHRev --simulation-type "Random" --conf-path <path_to_config_file>
+# AuthorshipRec Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy AuthorshipRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+# RevOwnRec Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy RevOwnRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+# LearnRec Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy LearnRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+# RetentionRec Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy RetentionRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+# TurnoverRec Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+# Sofia Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy Sofia --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+#WhoDo recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy WhoDo --simulation-type "SeededRandom" --conf-path <path_to_config_file>
+# SofiaWL Recommender
+dotnet-rgit --cmd simulate-recommender --recommendation-strategy SofiaWL --simulation-type "SeededRandom" --conf-path <path_to_config_file>
 ```
 
-Log into the database and run
-
-```SQL
--- Get the Id of the simulation 
-select Id, KnowledgeShareStrategyType, StartDateTime from LossSimulations
-```
-
-Using the Id returned from above, compare the knowlege loss with and without considering reviewers knowledgable run the following: 
-
-```PowerShell
-dotnet-rgit --cmd analyze-simulations --analyze-result-path "path_to_result" --no-reviews-simulation <no_reviews_sim_id> --reality-simulation <reality_sim_id>  --conf-path <path_to_config_file>
-```
+**Note**: In order to select between ```Random``` and ```SeededRandom```, adjust the ```--simulation-type``` command. If you want to run the seeded version, set the value of ```--simulation-type``` to ```Random``` for **cHRev** and all the other algorithms to ```SeededRandom```. If you wish to run the random version, set the value of ```--simulation-type``` to ```Random``` for all the algorithms.
 
 ---
 
