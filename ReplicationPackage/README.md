@@ -177,60 +177,26 @@ dotnet-rgit --cmd simulate-recommender --recommendation-strategy TurnoverRec --s
 ```
 ---
 
-### Simulation RQ6: Ownership, Turnover, and Workload Aware: Can we combine the recommenders to balance Expertise, Workload, and FaR?
-
-```PowerShell
-#SofiaWL recommender
-dotnet-rgit --cmd simulate-recommender --recommendation-strategy SofiaWL  --conf-path <path_to_config_file>
-```
----
-
 ## Dump the Simulation Data to CSV
 
-Log into the database and run
+Log into the database of each project and run the following command to find the IDs of your simulation.
 
 ```SQL
 -- Get the Id of the simulation 
-select Id, KnowledgeShareStrategyType, StartDateTime from LossSimulations
+SELECT  Id,
+	KnowledgeShareStrategyType, 
+	StartDateTime,
+	EndDateTime
+	PullRequestReviewerSelectionStrategy,
+	SimulationType 
+FROM LossSimulations
+WHERE EndDateTime > StartDateTime
+ORDER BY StartDateTime DESC
 ```
 
-Substitute the Id returned above for the recommender \<rec_sim_id\> and compare the recommenders with the actual values, \<reality_id>.
+To get your simulation results you should run the analyzer using the following command. Substitute the ```<rec_sim_id>``` variable with the Id of your desired recommender, and compare the recommender performance with the actual values, ```<reality_id>```. Note that you can add multiple simulation IDs and separate them using space.
+You should also substitute ```<path_to_result>``` and ```<path_to_config_file>``` variables with the path where you want to save the results and the config file of the corresponding RQ and project.
 
 ```PowerShell
-dotnet-rgit --cmd analyze-simulations --analyze-result-path "path_to_result" --recommender-simulation <rec_sim_id> --reality-simulation <reality_id>  --conf-path <path_to_config_file>
+dotnet-rgit --cmd analyze-simulations --analyze-result-path <path_to_result> --recommender-simulation <rec_sim_id> --reality-simulation <reality_id>  --conf-path <path_to_config_file>
 ```
-
-### Expertise and FAR results, and prior (ICSE) Workload measure results
-
-The tool creates four csv files, **expertise.csv**, **far.csv**, **workload.csv** and **auc.csv**  respectively. In the first three files, the first column shows the project's periods (quarters). Each column corresponds to one of the simulations. Each cell shows the percentage change between the actual outcome and the simulated outcome in that period. The last row of a column shows the median of its values. Note the **workload.csv** file is the prior workload measure used in the original ICSE version of the paper. The following table illustrates how a csv file of a project with 5 periods is formatted, assuming that only cHRev, TurnoverRec, and Sofia got compared with reality. For completeness we also show the top ten workload with the new outcomes [here](https://docs.google.com/spreadsheets/d/1CXXAPims3Zjs5zeDnFH80Gz3sq_GmYOYVpGt3p0oIP4/edit?usp=sharing)
-
-| Periods       | cHRev         | cHRev         | TurnoverRec   | Sofia         |
-| ------------- | ------------- | ------------- | ------------- |-------------- |
-| 1  | 9.12  | 20 | 15  | 10  |
-| 2  | 45.87  | 30  | 20  | 25  |
-| 3  | 25.10  | 40  | 25  | 42  |
-| 4  | 32.10  | 50  | 30  | 90  |
-| 5  | 10.10  | 60  | 35  | 34.78  |
-| Median  | 25.10  | 40  | 25  | 25  |
-
-**Note**: During simulations, for each pull request, one reviewer is randomly selected to be replaced by the top recommended reviewer. 
-
-### Gini AUC CDF of Review Workload 
-
-The file **auc.csv** from the prior step, shows the number of reviews of developers in each quarter. To calculate the Gini AUC-based Workload measure run [WorkloadAUC.r](WorkloadMeasures/WorkloadAUC.R). The data from our simulations are in [CSV](ResultsCSV/WorkloadAUC/Simulated/).
-
-### Exponential weighting for RetetionRec 
-We changed Contribution of developers from Yearly to the weighted one and value recent contribution more and the code for this part is in [commit](https://github.com/fahimeh1368/SofiaWL/commit/f452397e939eeb88dc3bbc7007115a190e004eb8) but the results was not as good as RetentionRec which is shown below.
-
-|Project         | Expertise       | FaR         | Gini        |
-| ------------- | ------------- | ------------- |-------------|
-| CoreFX  | 12.93  | -24.25 | 9  |
-| CoreCLR  | 10.78  | -12.88  | 16.57  |
-| Roslyn | 14.70  |-17.94  | 11.63  | 
-| Rust  | 12.68  | -4.73  | 11.5  | 90  |
-| Kubernetes  | 19.68  | -16.43  | 9.72  |
-| Average  | 14.15  | -15.24  | 11.78  |
-
-
-### Sensitivity analysis for k in SofiaV2
-We change the line of the config file manually which is "RecommenderOption": "alpha-1,beta-1,risk-3,hoarder_ratio-1", To change k for Risky files. In this line risk-number shows the k+1. It means that if we have risk-3 files that have less than 2 developer are considered risky. The results of sensitive analysis exists in [here](https://docs.google.com/spreadsheets/d/1CXXAPims3Zjs5zeDnFH80Gz3sq_GmYOYVpGt3p0oIP4/edit#gid=1577563518) 
