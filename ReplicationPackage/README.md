@@ -218,7 +218,7 @@ As some of the simulations can take hours to run, the following table includes t
 | *CHRev*            | 21101     | 20195      | 116      | 120  | 122        |
 | *LearnRec*         | 21102     | 20199      | 118      | 123  | 126        |
 | *RetentionRec*     | 21099     | 20200      | 117      | 122  | 125        |
-| *TurnoverRec*      | 21083     | 20164      | 109      | 112  | 114        |
+| *TurnoverRec*      | 11083     | 10164      | 109      | 112  | 114        |
 | *WhoDo*            | 21103     | 20194      | 123      | 121  | 130        |
 | **RQ2: Recommenders++**  |     |            |          |      |            |
 | *AuthorshipRec++*  | 11085     | 10155      | 102      | 107  | 108        |
