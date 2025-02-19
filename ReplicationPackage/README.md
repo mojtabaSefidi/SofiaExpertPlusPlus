@@ -200,3 +200,7 @@ You should also substitute ```<path_to_result>``` and ```<path_to_config_file>``
 ```PowerShell
 dotnet-rgit --cmd analyze-simulations --analyze-result-path <path_to_result> --recommender-simulation <rec_sim_id> --reality-simulation <reality_id>  --conf-path <path_to_config_file>
 ```
+
+### Results for the outcome measures:
+
+After running the analyzer, the tool creates five CSV files: **Expertise.csv**, **FaR.csv**, **Core_Workload.csv**, **ReviewerPlusPlus.csv**, and **AUC.csv**. The first column shows the project's periods (quarters) in the first four files. Each column corresponds to one of the simulations. Each cell of the first three files shows the percentage change between the actual and simulated outcomes in that period. The last two rows show the *median* and *average* of columns. The **ReviewerPlusPlus.csv** file shows the proportion of pull requests to which a recommender adds an extra reviewer in each period. The last rows of this file present the *Reveiwer++* outcome during the whole lifetime of projects. The **AUC.csv** file indicates the number of reviews for each developer. To calculate the *gini-workload* and plot the Lorenz-Curve for each recommender, you should run the [WorkloadAUC.r](WorkloadMeasures/WorkloadAUC.R) script. Note that the **Core_Workload.csv** file includes the number of reviews for the top 10 reviewers in each period. This outcome measure is defined in our [prior work](https://dl.acm.org/doi/10.1145/3377811.3380335) that was published in ICSE.
