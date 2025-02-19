@@ -204,3 +204,36 @@ dotnet-rgit --cmd analyze-simulations --analyze-result-path <path_to_result> --r
 ### Results for the outcome measures:
 
 After running the analyzer, the tool creates five CSV files: **Expertise.csv**, **FaR.csv**, **Core_Workload.csv**, **ReviewerPlusPlus.csv**, and **AUC.csv**. The first column shows the project's periods (quarters) in the first four files. Each column corresponds to one of the simulations. Each cell of the first three files shows the percentage change between the actual and simulated outcomes in that period. The last two rows show the *median* and *average* of columns. The **ReviewerPlusPlus.csv** file shows the proportion of pull requests to which a recommender adds an extra reviewer in each period. The last rows of this file present the *Reveiwer++* outcome during the whole lifetime of projects. The **AUC.csv** file indicates the number of reviews for each developer. To calculate the *gini-workload* and plot the Lorenz-Curve for each recommender, you should run the [WorkloadAUC.r](WorkloadMeasures/WorkloadAUC.R) script. Note that the **Core_Workload.csv** file includes the number of reviews for the top 10 reviewers in each period. This outcome measure is defined in our [prior work](https://dl.acm.org/doi/10.1145/3377811.3380335) that was published in ICSE.
+
+### Our Simulation IDs:
+
+As some of the simulations can take hours to run, the following table includes the simulation IDs for our experiments. 
+
+| **Recommender**     | **CoreFX** | **CoreCLR** | **Roslyn** | **Rust** | **Kubernetes** |
+|:-------------------:|:---------:|:----------:|:--------:|:----:|:----------:|
+| *Reality*          | 11095     | 10163      | 101      | 110  | 107        |
+| **RQ1: Baseline**  |           |            |          |      |            |
+| *AuthorshipRec*    | 21098     | 20188      | 120      | 127  | 123        |
+| *RevOwnRec*        | 21100     | 20189      | 119      | 124  | 124        |
+| *CHRev*            | 21101     | 20195      | 116      | 120  | 122        |
+| *LearnRec*         | 21102     | 20199      | 118      | 123  | 126        |
+| *RetentionRec*     | 21099     | 20200      | 117      | 122  | 125        |
+| *TurnoverRec*      | 21083     | 20164      | 109      | 112  | 114        |
+| *WhoDo*            | 21103     | 20194      | 123      | 121  | 130        |
+| **RQ2: Recommenders++**  |     |            |          |      |            |
+| *AuthorshipRec++*  | 11085     | 10155      | 102      | 107  | 108        |
+| *RevOwnRec++*      | 11086     | 10156      | 103      | 106  | 109        |
+| *CHRev++*          | 11088     | 10157      | 104      | 105  | 110        |
+| *LearnRec++*       | 11089     | 10158      | 107      | 104  | 111        |
+| *RetentionRec++*   | 11090     | 10159      | 106      | 103  | 112        |
+| *TurnoverRec++*    | 11084     | 10176      | 108      | 109  | 113        |
+| *WhoDo++*          | 11092     | 10161      | 99       | 101  | 106        |
+| **RQ3: FarAwareRec** |         |            |          |      |            |
+| *FarAwareRec*      | 11081     | 10169      | 111      | 113  | 116        |
+| **RQ4: HoardedXRec** |         |            |          |      |            |
+| *Hoarded2Rec*      | 11098     | 10179      | 112      | 115  | 119        |
+| *Hoarded3Rec*      | 11097     | 10180      | 113      | 116  | 118        |
+| *Hoarded4Rec*      | 11096     | 10181      | 114      | 117  | 117        |
+
+
+
