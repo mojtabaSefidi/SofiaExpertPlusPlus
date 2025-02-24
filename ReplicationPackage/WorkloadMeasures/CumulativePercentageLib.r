@@ -1,5 +1,5 @@
 #to calculate AUC
-install.packages("MESS")
+# install.packages("MESS")
 library(MESS)
 
 percentage_difference <- function(a, s) {
@@ -88,8 +88,11 @@ cumulative_at_p_all <- function(d, p) {
          get_cumulative_at_df(percentage_percentage_freq(d$Rust), p), 
          get_cumulative_at_df(percentage_percentage_freq(d$Kubernetes), p)
   )
+  
+  print('Average Across Projects:')
   print(mean(r))
   #print(100-mean(r))
+  print('CoreFX, CoreCLR, Roslyn, Rust, Kubernetes:')
   r
 }
 
@@ -113,7 +116,9 @@ auc_difference_percentage_all <- function(a, s) {
          auc_difference_percentage(a$Rust, s$Rust),
          auc_difference_percentage(a$Kubernetes, s$Kubernetes)
   )
+  print('Average Across Projects:')
   print(mean(r))
+  print('CoreFX, CoreCLR, Roslyn, Rust, Kubernetes:')
   r
 }
 auc_difference_percentage_Simulated <- function(a, s) {
