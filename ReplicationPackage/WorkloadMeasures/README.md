@@ -54,7 +54,7 @@ ORDER BY PullIndex;
 
 ```
 
-Note: This query takes about 8~10 minutes to run for each recommender. The data from our simulations are available in [CSV](Data/Workload/Simulated/).
+Note: This query takes about 8~10 minutes to run for each recommender. The data from our simulations are available in [ResultsCSV](Data/Workload/Simulated/) Directory.
 
 ### How to calculate the Gini-Workload for each recommender.
 
