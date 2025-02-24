@@ -18,12 +18,13 @@ namespace RelationalGit.Calculation
         {
             if (!Directory.Exists(analyzeResultPath))
                 Directory.CreateDirectory(analyzeResultPath);
-           
-            CalculateOpenReviews(actualSimulationId, recommenderSimulationIds, analyzeResultPath);
+
+            //testGetNumKnowledgeable();
             CalculateFaRReduction(actualSimulationId, recommenderSimulationIds, analyzeResultPath);
             CalculateExpertiseLoss(actualSimulationId, recommenderSimulationIds, analyzeResultPath);
             CalculateWorkload(actualSimulationId, recommenderSimulationIds, 10, analyzeResultPath);
-          
+            CalculateAddedPR(recommenderSimulationIds, analyzeResultPath);
+            // CalculateOpenReviews(actualSimulationId, recommenderSimulationIds, analyzeResultPath);
         }
 
         public void CalculateWorkload(long actualId, long[] simulationsIds, int topReviewers, string path)
@@ -61,9 +62,9 @@ namespace RelationalGit.Calculation
                 foreach (var simulationId in simulationsIds)
                 {
                     var lossSimulation = dbContext.LossSimulations.Single(q => q.Id == simulationId);
-                    
+
                     var simulatedSelectedReviewers = dbContext.RecommendedPullRequestReviewers.Where(q => q.LossSimulationId == simulationId)
-                        .Select(q=>new { q.NormalizedReviewerName, q.PullRequestNumber })
+                        .Select(q => new { q.NormalizedReviewerName, q.PullRequestNumber })
                         .AsNoTracking()
                         .ToArray();
 
@@ -107,7 +108,7 @@ namespace RelationalGit.Calculation
                 }
             }
 
-            Write(result, Path.Combine(path, "workload.csv"));
+            Write(result, Path.Combine(path, "Core_Workload.csv"));
         }
 
         private static void CalculateWorkloadRaw(long[] simulationsIds, int topReviewers, string path)
@@ -177,7 +178,7 @@ namespace RelationalGit.Calculation
                 var pullRequests = dbContext.PullRequests.ToDictionary(q => q.Number);
 
                 var actualRecommendationResults = dbContext.PullRequestRecommendationResults.Where(q => q.LossSimulationId == actualId && q.ActualReviewersLength > 0)
-                    .Select(q => new { q.Expertise,q.PullRequestNumber})
+                    .Select(q => new { q.Expertise, q.PullRequestNumber })
                     .ToArray();
 
                 var actualExpertise = new Dictionary<long, List<double>>();
@@ -201,7 +202,7 @@ namespace RelationalGit.Calculation
                     var simulatedExpertise = new Dictionary<long, List<double>>();
                     var lossSimulation = dbContext.LossSimulations.Single(q => q.Id == simulationId);
                     var simulatedRecommendationResults = dbContext.PullRequestRecommendationResults.Where(q => q.LossSimulationId == simulationId && q.ActualReviewersLength > 0)
-                        .Select(q => new { q.Expertise,q.PullRequestNumber})
+                        .Select(q => new { q.Expertise, q.PullRequestNumber })
                         .ToArray();
 
                     foreach (var simulatedRecommendationResult in simulatedRecommendationResults)
@@ -238,7 +239,7 @@ namespace RelationalGit.Calculation
                 }
             }
 
-            Write(result, Path.Combine(path, "expertiseloss.csv"));
+            Write(result, Path.Combine(path, "Expertise.csv"));
         }
 
         private static void CalculateHoardings(long actualId, long[] simulationsIds, int topReviewers, string path)
@@ -378,6 +379,102 @@ namespace RelationalGit.Calculation
             Write(result, Path.Combine(path, "expertise_raw.csv"));
         }
 
+        //Uses CoreCLR as a reference, other DBs using these IDs may not give appropriate results
+        private void testGetNumKnowledgeable()
+        {
+            using (var dbContext = GetDbContext())
+
+            {
+                //Get the files to be used for the testing.
+                var developers = dbContext.Developers.ToArray();
+                //5259320, 5259067 are the ones that should lose a knowledgeable.
+                int[] fileIds = { 5230853, 5230863, 5230877,
+                     5259012, 5259013,5259040, 5259067,
+                    5259115, 5259320,
+                };
+                var testFiles = getTestFiles(dbContext, fileIds);
+
+                //Verify they're the right files
+                int i = 0;
+                var CanonicalToName = dbContext.GetCanonicalPaths();
+                Dictionary<String, String> NameToCanonical = CanonicalToName.ToDictionary(pair => pair.Value, pair => pair.Key);
+                foreach (var file in testFiles)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Expected Id: " + fileIds[i]);
+                    i += 1;
+                    // Console.WriteLine("File details: " + file.getStringForTesting());
+
+                    //Verify the leavers are being adjusted appropriately
+
+                    Console.WriteLine("Raw Knowledgeable Developer Count: " + file.TotalKnowledgeables);
+                    Console.WriteLine("Count Adjusted for leavers: " +
+                        getNumKnowledgeable(file, developers, NameToCanonical, false));
+
+                }
+                //TODO Have this generated instead of hard coded for the example.
+                Console.WriteLine("Relevant leavers: PatGavlin");
+                Console.WriteLine("Changes should be seen in 5259320, 5259067, 5259115\n\n");
+            }
+        }
+
+        //Returns an array of the FileKnowledgeables with Ids specified in fileIds for testing purposes.
+        private FileKnowledgeable[] getTestFiles(GitRepositoryDbContext dbContext, int[] fileIds)
+        {
+
+            var result = dbContext.FileKnowledgeables.Where(q =>
+            Array.Exists(fileIds, element => element == (int)q.Id))
+                .ToArray();
+            return result;
+        }
+        private int getNumKnowledgeable(FileKnowledgeable q,
+            Developer[] developers, Dictionary<String, String> canonicalPaths, bool ignoreLeavers = true)
+        {
+            //If the leavers knowledge loss is to be ignored
+            if (ignoreLeavers)
+            {
+                return q.TotalKnowledgeables;
+            }
+
+            //If there are no knowledgeable developers, return a 0 to prevent splitting a null String
+            else if (q.TotalKnowledgeables == 0)
+            {
+                return 0;
+            }
+
+            else
+            {
+                int knowledgeableLeavers = 0;
+
+                //For each of the knowledgeable developers, check if they are leavers
+                foreach (String Knowledgeable in q.Knowledgeables.Split(','))
+                {
+                    foreach (Developer d in developers)
+                    {
+                        if (checkIfLeaver(q, Knowledgeable, d, canonicalPaths))
+                        {
+                            knowledgeableLeavers += 1;
+                        }
+                    }
+
+                }
+                //Define the actual Knowledgeables as all knowledgables minus the leavers
+                int actualKnowledgeables = q.TotalKnowledgeables - knowledgeableLeavers;
+                return actualKnowledgeables;
+            }
+        }
+
+        private static bool checkIfLeaver(FileKnowledgeable q, string Knowledgeable,
+            Developer d, Dictionary<String, String> canonicalPaths)
+        {
+            //String fileName = canonicalPaths[q.CanonicalPath];
+            //if (TEMPVAL < 5) { TEMPVAL++;
+            //    Console.WriteLine(fileName, q.CanonicalPath);
+            //}
+
+            return d.NormalizedName.Equals(Knowledgeable) && d.LastCommitPeriodId <= (int)q.PeriodId;
+        }
+        //static int TEMPVAL = 0;
         public void CalculateFaRReduction(long actualId, long[] simulationsIds, string path)
         {
             if (!Directory.Exists(path))
@@ -387,6 +484,7 @@ namespace RelationalGit.Calculation
 
             using (var dbContext = GetDbContext())
             {
+
                 var actualFaR = dbContext.FileKnowledgeables.Where(q => q.HasReviewed && q.TotalKnowledgeables < 2 && q.LossSimulationId == actualId).
                     GroupBy(q => q.PeriodId).
                     Select(q => new { Count = q.Count(), PeriodId = q.Key })
@@ -412,7 +510,7 @@ namespace RelationalGit.Calculation
 
                     foreach (var simulatedFaRPeriod in simulatedFaR)
                     {
-                        
+
                         var actualValue = actualFaR.SingleOrDefault(q => q.PeriodId == simulatedFaRPeriod.PeriodId);
 
                         if (actualValue == null)
@@ -428,10 +526,178 @@ namespace RelationalGit.Calculation
                 }
             }
 
-            Write(result, Path.Combine(path, "far.csv"));
+            Write(result, Path.Combine(path, "FaR.csv"));
 
         }
-       
+
+        public void CalculateAddedPR(long[] simulationsIds, string path)
+        {
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+
+            var result = new List<SimulationResult>();
+            var lifetimeResults = new Dictionary<long, double>(); // Store lifetime results per simulation
+
+            using (var dbContext = GetDbContext())
+            {
+                // Step 1: Create a dictionary mapping PR numbers to their Period IDs
+                var prToPeriod = dbContext.PullRequests
+                    .Join(dbContext.Periods,
+                        pr => 1,
+                        period => 1,
+                        (pr, period) => new {
+                            pr.Number,
+                            pr.ClosedAtDateTime,
+                            PeriodId = period.Id,
+                            period.FromDateTime,
+                            period.ToDateTime
+                        })
+                    .Where(x => x.ClosedAtDateTime >= x.FromDateTime && x.ClosedAtDateTime < x.ToDateTime)
+                    .ToDictionary(x => x.Number, x => x.PeriodId);
+
+                foreach (var simulationId in simulationsIds)
+                {
+                    var lossSimulation = dbContext.LossSimulations.Single(q => q.Id == simulationId);
+
+                    // Calculate lifetime metrics for this simulation
+                    var lifetimeMetrics = dbContext.PullRequestRecommendationResults
+                        .Where(pr => prToPeriod.ContainsKey((int)pr.PullRequestNumber) &&
+                                    pr.LossSimulationId == simulationId)
+                        .GroupBy(pr => pr.LossSimulationId)
+                        .Select(g => new
+                        {
+                            SimulationId = g.Key,
+                            TotalPRs = g.Count(),
+                            TotalPRsWithAddedReviewers = g.Count(pr =>
+                                pr.ActualReviewersLength < pr.SelectedReviewersLength)
+                        })
+                        .FirstOrDefault();
+
+                    // Calculate and store lifetime addedPR for this simulation
+                    if (lifetimeMetrics != null && lifetimeMetrics.TotalPRs > 0)
+                    {
+                        lifetimeResults[simulationId] = ((double)lifetimeMetrics.TotalPRsWithAddedReviewers /
+                            lifetimeMetrics.TotalPRs) * 100;
+                    }
+                    else
+                    {
+                        lifetimeResults[simulationId] = 0.0;
+                    }
+
+                    // Calculate period-wise metrics
+                    var segmentedPRs = dbContext.PullRequestRecommendationResults
+                        .Where(pr => prToPeriod.ContainsKey((int)pr.PullRequestNumber) &&
+                                    pr.LossSimulationId == simulationId)
+                        .GroupBy(pr => prToPeriod[(int)pr.PullRequestNumber])
+                        .Select(g => new
+                        {
+                            PeriodId = g.Key,
+                            NumPRs = g.Count(),
+                            NumPRsWithAddedReviewers = g.Count(pr =>
+                                pr.ActualReviewersLength < pr.SelectedReviewersLength)
+                        })
+                        .ToList();
+
+                    var simulationResult = new SimulationResult()
+                    {
+                        LossSimulation = lossSimulation,
+                        Results = new List<(long PeriodId, double Value)>()
+                    };
+
+                    foreach (var segment in segmentedPRs)
+                    {
+                        double addedPR = segment.NumPRs == 0 ? 0 :
+                            ((double)segment.NumPRsWithAddedReviewers / segment.NumPRs) * 100;
+                        simulationResult.Results.Add((segment.PeriodId, addedPR));
+                    }
+
+                    var allPeriodIds = dbContext.Periods
+                        .Select(p => p.Id)
+                        .ToList();
+
+                    foreach (var periodId in allPeriodIds.Where(p =>
+                        !simulationResult.Results.Any(r => r.PeriodId == p)))
+                    {
+                        simulationResult.Results.Add((periodId, 0.0));
+                    }
+
+                    simulationResult.Results = simulationResult.Results
+                        .OrderBy(r => r.PeriodId)
+                        .ToList();
+
+                    result.Add(simulationResult);
+                }
+            }
+
+            WriteWithLifetime(result, lifetimeResults, Path.Combine(path, "ReviewerPlusPlus.csv"));
+        }
+
+
+        private void WriteWithLifetime(List<SimulationResult> results, Dictionary<long, double> lifetimeResults, string filePath)
+        {
+            using (var dt = new DataTable())
+            {
+                dt.Columns.Add("PeriodId", typeof(string));
+
+                foreach (var simulation in results)
+                {
+                    dt.Columns.Add(simulation.LossSimulation.KnowledgeShareStrategyType + "-" + simulation.LossSimulation.Id, typeof(double));
+                }
+
+                var periodIds = results
+                .SelectMany(simulation => simulation.Results.Select(r => r.PeriodId))
+                .Distinct()
+                .OrderBy(id => id)
+                .ToList();
+
+                foreach (var periodId in periodIds)
+                {
+                    var row = dt.NewRow();
+                    row["PeriodId"] = periodId.ToString();
+
+                    foreach (var simulation in results)
+                    {
+                        var resultEntry = simulation.Results.FirstOrDefault(r => r.PeriodId == periodId);
+                        row[simulation.LossSimulation.KnowledgeShareStrategyType + "-" + simulation.LossSimulation.Id] =
+                            resultEntry != default ? resultEntry.Value : (object)DBNull.Value;
+                    }
+
+                    dt.Rows.Add(row);
+                }
+
+                // Add lifetime results row
+                var lifetimeRow = dt.NewRow();
+                lifetimeRow["PeriodId"] = "ReviewerPlusPlus_Lifetime";
+
+                foreach (var simulation in results)
+                {
+                    lifetimeRow[simulation.LossSimulation.KnowledgeShareStrategyType + "-" + simulation.LossSimulation.Id] =
+                        lifetimeResults.ContainsKey(simulation.LossSimulation.Id) ? lifetimeResults[simulation.LossSimulation.Id] : (object)DBNull.Value;
+                }
+
+                dt.Rows.Add(lifetimeRow);
+
+                using (var writer = new StreamWriter(filePath))
+                using (var csv = new CsvWriter(writer))
+                {
+                    foreach (DataColumn column in dt.Columns)
+                    {
+                        csv.WriteField(column.ColumnName);
+                    }
+                    csv.NextRecord();
+
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        for (var i = 0; i < dt.Columns.Count; i++)
+                        {
+                            csv.WriteField(row[i]);
+                        }
+                        csv.NextRecord();
+                    }
+                }
+            }
+        }
+
         public void CalculateFaRReductionBetweenRealityAndNoReviews(long actualId, long noReviewId, string path)
         {
             if (!Directory.Exists(path))
@@ -529,22 +795,28 @@ namespace RelationalGit.Calculation
                     result.Add(simulationResult);
                 }
             }
+
+            result = result.OrderBy(q => q.LossSimulation.KnowledgeShareStrategyType).ToList();
+            Write(result, Path.Combine(path, "far_raw.csv"));
+
         }
-        private static void CalculateOpenReviews(long actualId,long[] simulationsIds, string path)
-            {
+
+        private static void CalculateOpenReviews(long actualId, long[] simulationsIds, string path)
+        {
             var result = new List<OpenReviewResult>();
-            foreach (var simulationId in simulationsIds){
+            foreach (var simulationId in simulationsIds)
+            {
 
                 var values = new List<int>();
 
                 var AppSettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "relationalgit.json");
-                
+
                 var builder = new ConfigurationBuilder()
               .AddJsonFile(AppSettingsPath);
 
                 var Configuration = builder.Build();
 
-                string connectionString =  Configuration.GetConnectionString("RelationalGit");
+                string connectionString = Configuration.GetConnectionString("RelationalGit");
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     var queryString = $@"SELECT  NormalizedName,
@@ -554,10 +826,10 @@ namespace RelationalGit.Calculation
   order by pulls desc";
                     SqlCommand command = new SqlCommand(queryString, connection);
                     command.Parameters.AddWithValue("@simId", simulationId);
-                     connection.Open();
+                    connection.Open();
                     command.CommandTimeout = 0;
                     SqlDataReader reader = command.ExecuteReader();
-                    
+
                     try
                     {
                         while (reader.Read())
@@ -586,12 +858,12 @@ namespace RelationalGit.Calculation
 
                     result.Add(openRevResult);
                 }
-                
+
             }
-            WriteOpenReviws(result, Path.Combine(path, "auc.csv"));
+            WriteOpenReviws(result, Path.Combine(path, "AUC.csv"));
         }
 
-      
+
 
         private static void CalculateTotalFaRRaw(long[] simulationsIds, string path)
         {
@@ -644,13 +916,13 @@ namespace RelationalGit.Calculation
 
                 var rows = simulationResults.ElementAt(0).Results
                     .Select(q => q.PeriodId)
-                    .OrderBy(q=>q)
+                    .OrderBy(q => q)
                     .Select(q =>
-                {
-                    var row = dt.NewRow();
-                    row[0] = q;
-                    return row;
-                }).ToArray();
+                    {
+                        var row = dt.NewRow();
+                        row[0] = q;
+                        return row;
+                    }).ToArray();
 
 
                 for (int j = 0; j < rows.Length - 1; j++)
@@ -662,7 +934,7 @@ namespace RelationalGit.Calculation
                     dt.Rows.Add(rows[j]);
                 }
 
-                for (int j = dt.Rows.Count - 1; j>=0; j--)
+                for (int j = dt.Rows.Count - 1; j >= 0; j--)
                 {
                     var isRowConstant = IsRowConstant(dt.Rows[j]);
 
@@ -676,22 +948,26 @@ namespace RelationalGit.Calculation
                 rowMedian[0] = "Median";
                 var medians = new List<double>();
 
+                var rowAverage = dt.NewRow();
+                rowAverage[0] = "Average";
+                var averages = new List<double>();
+
                 for (int columnIndex = 1; columnIndex < dt.Columns.Count; columnIndex++)
                 {
                     var values = new List<double>();
 
                     for (int rowIndex = 0; rowIndex < dt.Rows.Count; rowIndex++)
                     {
-                        values.Add((double) dt.Rows[rowIndex][columnIndex]);
+                        values.Add((double)dt.Rows[rowIndex][columnIndex]);
                     }
 
                     medians.Add(values.Median());
-                    rowMedian[columnIndex] =  values.Median();
+                    rowMedian[columnIndex] = values.Median();
+
+                    averages.Add(values.Average());
+                    rowAverage[columnIndex] = values.Average();
                 }
 
-                var rowAverage = dt.NewRow();
-                rowAverage[0] = "Average";
-                rowAverage[1] = medians.Average();
                 dt.Rows.Add(rowMedian);
                 dt.Rows.Add(rowAverage);
 
@@ -719,7 +995,7 @@ namespace RelationalGit.Calculation
         {
             using (var dt = new DataTable())
             {
-               
+
                 foreach (var openRevResult in openReviewResults)
                 {
                     dt.Columns.Add(openRevResult.LossSimulation.KnowledgeShareStrategyType + "-" + openRevResult.LossSimulation.Id, typeof(double));
@@ -727,7 +1003,7 @@ namespace RelationalGit.Calculation
                 var max = openReviewResults.Max(a => a.Results.Count());
                 var temp = openReviewResults.Where(a => a.Results.Count() == max).FirstOrDefault();
                 var rows = temp.Results
-                    
+
                     .OrderBy(q => q)
                     .Select(q =>
                     {
@@ -739,11 +1015,11 @@ namespace RelationalGit.Calculation
 
                 for (int j = 0; j < rows.Length - 1; j++)
                 {
-                   
+
 
                     for (int i = 0; i < openReviewResults.Count(); i++)
                     {
-                        if (openReviewResults.ElementAt(i).Results.Count()-1 > j)
+                        if (openReviewResults.ElementAt(i).Results.Count() - 1 > j)
                         {
                             rows[j][i] = openReviewResults.ElementAt(i).Results[j];
                         }
@@ -752,12 +1028,12 @@ namespace RelationalGit.Calculation
                         {
                             rows[j][i] = DBNull.Value;
                         }
-                       
+
                     }
                     dt.Rows.Add(rows[j]);
                 }
 
-                
+
                 using (var writer = new StreamWriter(path))
                 using (var csv = new CsvWriter(writer))
                 {
@@ -771,12 +1047,12 @@ namespace RelationalGit.Calculation
                     {
                         for (var i = 0; i < dt.Columns.Count; i++)
                         {
-                           
+
                             csv.WriteField(row[i]);
                         }
                         csv.NextRecord();
                     }
-                    
+
                 }
             }
         }
@@ -789,7 +1065,7 @@ namespace RelationalGit.Calculation
 
             for (int i = 2; i < row.Table.Columns.Count; i++)
             {
-                if(lastCheckedValue.ToString() != row[i].ToString())
+                if (lastCheckedValue.ToString() != row[i].ToString())
                 {
                     return false;
                 }
@@ -819,7 +1095,7 @@ namespace RelationalGit.Calculation
 
             public List<int> Results { get; set; } = new List<int>();
 
-            
+
         }
 
         private static double CalculateIncreasePercentage(double first, double second)
