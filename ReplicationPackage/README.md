@@ -4,18 +4,18 @@ The overall steps are
 
 1. Install Relational Git
 2. Get the Database
-3. Run the Simulations (seeded random or random). Please see the TSE paper for more details on why we used seeded random.
+3. Run the Simulations for each research question
 4. Dump the Simulation Data to CSV
-5. Calculate the Expertise, Workload, and FaR measures
+5. Calculate the outcome measures: Expertise, Gini-Workload, FaR, and Reviewer++
 
 ## Install Relational Git
 
-1) [Install](https://github.com/fahimeh1368/SofiaWL/blob/gh-pages/install.md) the tool and its dependencies.
+1) [Install](https://github.com/fahimeh1368/SofiaWL/blob/gh-pages/install.md) the Relational Git and its dependencies.
 
 ## Get the Database
 
-1) Restore the backup of the data into MS SQL Server. For each studied project there is a separate database. You can select individual files from the [db backup](https://www.dropbox.com/home/SofiaWL-Databases). Note that some files are over 15GB.
-2) Copy the [configuration files](config).
+1) Restore the data backup into MS SQL Server from [Figshare](https://figshare.com/s/b79fc69acad8e11be31a). There is a separate database for each studied project. Note that the databases are over 15GB.
+2) Copy the configuration files and simulation.ps1 which are provided in the replication package.
 3) Open and modify each configuration file to set the connection string. You need to provide the server address along with the credentials. The following snippet shows a sample of how the connection string should be set.
 
 ```json
@@ -29,15 +29,15 @@ The overall steps are
  }
 ```
 
-4) Open [simulations.ps1](simulations.ps1) using an editor and make sure the config variables defined at the top of the file refer to the correct location of the downloaded config files. 
+4) Open [simulations.ps1](simulations.ps1) using an editor and make sure the corresponding config variables for each research question are defined in the file and refer to the correct location. For instance, each of the following variables contains the absolute path of the corresponding configuration file for the first research question.
+
 
 ```PowerShell
-# Each of the following variables contains the absolute path of the corresponding configuration file.
-$corefx_conf = "absolute/path/to/corefx_conf.json"
-$coreclr_conf = "absolute/path/to/coreclr_conf.json"
-$roslyn_conf = "absolute/path/to/roslyn_conf.json"
-$rust_conf = "absolute/path/to/rust_conf.json"
-$kubernetes_conf = "absolute/path/to/kubernetes_conf.json"
+$corefx_conf_RQ1 = "RQ1/absolute/path/to/corefx_conf.json"
+$coreclr_conf_RQ1 = "RQ1/absolute/path/to/coreclr_conf.json"
+$roslyn_conf_RQ1 = "RQ1/absolute/path/to/roslyn_conf.json"
+$rust_conf_RQ1 = "RQ1/absolute/path/to/rust_conf.json"
+$kubernetes_conf_RQ1 = "RQ1/absolute/path/to/kubernetes_conf.json"
 ```
 
 ## Run the Simulations
@@ -56,11 +56,11 @@ This script runs all the defined reviewer recommendation algorithms across all p
 
 The following sections describe the commands needed to run simulations for each research question. For each simulation, a sample is provided that illustrates how the simulation can be run using the tool.
 
-**Note:** To run the simulations for each of the following research questions, you need to change the config file of all five projects. We suggest creating an exclusive config file for each research question to avoid confusion.
+**Note:** To run the simulations for each of the following research questions, you need to change the config file of all five projects. To avoid confusion, we suggest creating an exclusive config file for each research question.
 
-### Simulation RQ1, Baseline: On PRKRs, how well do existing recommenders perform??
+### Simulation RQ1, Baseline: On PRKRs, how well do existing recommenders perform?
 
-On PRKRs, To replicate the performance of recommenders at the replacement level, you should apply the following change to the config file of each project.
+On PRKRs, to replicate the performance of recommenders at the replacement level, you should apply the following change to each project's config file.
 
 ```
 "PullRequestReviewerSelectionStrategy" : "0:nothing-nothing,-:farreplacerandom-1",
@@ -234,6 +234,3 @@ As some of the simulations can take hours to run, the following table includes t
 | *Hoarded2Rec*      | 11098     | 10179      | 112      | 115  | 119        |
 | *Hoarded3Rec*      | 11097     | 10180      | 113      | 116  | 118        |
 | *Hoarded4Rec*      | 11096     | 10181      | 114      | 117  | 117        |
-
-
-
