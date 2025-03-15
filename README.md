@@ -1,6 +1,6 @@
 # Replication Package
 
-This repository contains the necessary data to replicate the information from the study "_The Cost vs. the Benefit of Adding an Extra Code Reviewer to Mitigate Developer Turnover through Reviewer Recommenders_." First, Install the dependencies for the RelationalGit. For the replication steps, read the README file in the _src_ directory.
+This repository contains the necessary data to replicate the information from the study "_The Cost vs. the Benefit of Adding an Extra Code Reviewer to Mitigate Developer Turnover through Reviewer Recommenders_." First, Install the dependencies for the RelationalGit and for the replication steps, read the README file in the _ReplicationPackage_ directory.
 
 # RelationalGit
 
@@ -45,6 +45,6 @@ dotnet tool install --global SofiaWL --version 2.0.4
 ```
 
 # Replication
-For the replication steps and running simulations , read the README file in the _src_ directory.
+For the replication steps and running simulations , read the README file in the _ReplicationPackage_ directory.
 
 
