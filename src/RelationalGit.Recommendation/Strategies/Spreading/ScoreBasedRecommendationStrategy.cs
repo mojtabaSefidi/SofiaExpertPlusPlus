@@ -153,7 +153,11 @@ namespace RelationalGit.Recommendation
                     {
                         using (var dbContext = GetDbContext())
                         {
-                            var cHRevId = dbContext.LossSimulations.Where(q => q.KnowledgeShareStrategyType == "cHRev")
+                            var cHRevId = dbContext.LossSimulations
+                                .Where(q => q.KnowledgeShareStrategyType == "cHRev" &&
+                                q.StartDateTime < q.EndDateTime &&
+                                q.SimulationType == "Random" &&
+                                q.PullRequestReviewerSelectionStrategy == "0:nothing-nothing,-:replacerandom-1")
                                 .OrderByDescending(q => q.StartDateTime)
                                 .Select(q => new { q.Id })
                                 .First().Id;
@@ -189,8 +193,14 @@ namespace RelationalGit.Recommendation
                                     {
                                         var TopCandidate = SortedCandidates.Split(", ").ToArray().FirstOrDefault();
                                         indexArray[0] = Array.IndexOf(actualList, TopCandidate.ToString());
-                                       
+
                                     }
+                                    
+                                    else if (SortedCandidates == null && availableDevs.Length > 0)
+                                    {
+                                        indexArray[0] = _rnd.Next(0, actualReviewersCombination.Count());
+                                    }
+                                    
                                 }
                             }
                             else
