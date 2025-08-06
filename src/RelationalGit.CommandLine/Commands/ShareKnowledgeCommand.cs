@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +9,6 @@ using RelationalGit.Data;
 using RelationalGit.Simulation;
 using RelationalGit.KnowledgeShareStrategies;
 
-
 namespace RelationalGit.Commands
 {
     public class ShareKnowledgeCommand
@@ -17,6 +16,7 @@ namespace RelationalGit.Commands
         #region Fields
         private GitRepositoryDbContext _dbContext;
         private Commit[] _commits;
+        private Commit[] _bugFixCommits;
         private CommitBlobBlame[] _commitBlobBlames;
         private CommittedChange[] _committedChanges;
         private PullRequest[] _pullRequests;
@@ -54,7 +54,7 @@ namespace RelationalGit.Commands
             using (var transaction = _dbContext.Database.BeginTransaction())
             {
                 SavePullRequestReviewes(knowledgeDistributioneMap, lossSimulation);
-                _logger.LogInformation("{datetime}: RecommendedPullRequestReviewes are saved successfully.", DateTime.Now);
+                _logger.LogInformation("{datetime}: RecommendedPullRequestReviewers are saved successfully.", DateTime.Now);
                 SaveOwnershipDistribution(knowledgeDistributioneMap, lossSimulation, leavers);
                 _logger.LogInformation("{datetime}: Ownership Distribution is saved Successfully.", DateTime.Now);
 
@@ -84,12 +84,20 @@ namespace RelationalGit.Commands
 
         private void SavePullRequestSimulatedRecommendationResults(KnowledgeDistributionMap knowledgeDistributioneMap, LossSimulation lossSimulation)
         {
+
             var results = knowledgeDistributioneMap.PullRequestSimulatedRecommendationMap.Values;
             var bulkPullRequestSimulatedRecommendationResults = new List<Data.PullRequestRecommendationResult>();
-            var bulkRecommendedPullRequestCandidatess = new List<RecommendedPullRequestCandidate>(results.Count()*5);
-            
+            var bulkRecommendedPullRequestCandidatess = new List<RecommendedPullRequestCandidate>(results.Count() * 5);
+
             foreach (var result in results)
             {
+                var defectPronenessPerExpert = 0;
+                var numberOfExperts = 0;
+                // foreach(var file in PullRequestContext.)
+                if (result.DefectProneness != 0)
+                {
+                    var k = 5;
+                }
                 bulkPullRequestSimulatedRecommendationResults.Add(new Data.PullRequestRecommendationResult()
                 {
                     ActualReviewers = result.ActualReviewers?.Count() > 0 ? result.ActualReviewers?.Aggregate((a, b) => a + ", " + b) : null,
@@ -106,15 +114,19 @@ namespace RelationalGit.Commands
                     LossSimulationId = lossSimulation.Id,
                     Expertise = result.Expertise,
                     IsRisky = result.IsRisky,
-                    Features=result.Features
+                    Features = result.Features,
+                    DefectProneness = result.DefectProneness,
+                    SwappedRevExp = result.ActualReviewers?.Count() > 0 ? result.SwappedRevExpertise : null,
+                    RecRevExp = result.SelectedReviewers?.Count() > 0 ? result.RecommendedRevExpertise : null,
+
                 });
 
                 for (int i = 0; i < result.SortedCandidates.Take(10).Count(); i++)
                 {
                     bulkRecommendedPullRequestCandidatess.Add(new RecommendedPullRequestCandidate(
-                        lossSimulationId: lossSimulation.Id, 
-                        rank:i+1,normalizedReviewerName: result.SortedCandidates[i].DeveloperName, 
-                        score: result.SortedCandidates[i].Score, 
+                        lossSimulationId: lossSimulation.Id,
+                        rank: i + 1, normalizedReviewerName: result.SortedCandidates[i].DeveloperName,
+                        score: result.SortedCandidates[i].Score,
                         pullRequestNumber: result.PullRequestNumber));
                 }
 
@@ -122,12 +134,24 @@ namespace RelationalGit.Commands
 
             _dbContext.BulkInsert(bulkRecommendedPullRequestCandidatess, new BulkConfig { BatchSize = 50000, BulkCopyTimeout = 0 });
             _dbContext.BulkInsert(bulkPullRequestSimulatedRecommendationResults, new BulkConfig { BatchSize = 50000, BulkCopyTimeout = 0 });
+
+            string simulationStrategy = lossSimulation.PullRequestReviewerSelectionStrategy;
+            int colonIndex = simulationStrategy.LastIndexOf(':');
+            int hyphenOneIndex = simulationStrategy.IndexOf("-1", colonIndex);
+            string simulation_info = lossSimulation.KnowledgeShareStrategyType + "-" + lossSimulation.Id + "-" + simulationStrategy.Substring(colonIndex + 1, hyphenOneIndex - colonIndex - 1);
+
+            _dbContext.Database.ExecuteSqlCommand(
+                $"UPDATE BirdExpertise SET LossSimulationId = {simulation_info} WHERE LossSimulationId IS NULL");
+            
+            _dbContext.Database.ExecuteSqlCommand(
+                $"UPDATE Expertise SET LossSimulationId = {simulation_info} WHERE LossSimulationId IS NULL");
         }
 
         private void SaveOwnershipDistribution(KnowledgeDistributionMap knowledgeDistributioneMap, LossSimulation lossSimulation, Dictionary<long, IEnumerable<SimulatedLeaver>> leavers)
         {
-            var bulkFileTouches = new List<FileTouch>();
+             var bulkFileTouches = new List<FileTouch>();
             var bulkFileKnowledgeable = new List<FileKnowledgeable>();
+            var bulkSimulatedLeaver = new List<SimulatedLeaver>();
 
             foreach (var period in _periods)
             {
@@ -143,6 +167,17 @@ namespace RelationalGit.Commands
                 // getting the list of people who were active in this period and also who have left the project by the end of this period
                 var availableDevelopersOfPeriod = GetAvailableDevelopersOfPeriod(period).Select(q => q.NormalizedName).ToHashSet();
                 var leaversOfPeriod = leavers[period.Id].Select(q => q.NormalizedName).ToHashSet();
+                foreach (var leaver in leavers[period.Id])
+                {
+                    bulkSimulatedLeaver.Add(new SimulatedLeaver()
+                    {
+                        LossSimulationId = leaver.LossSimulationId,
+                        PeriodId = leaver.PeriodId,
+                        NormalizedName = leaver.NormalizedName,
+                        LeavingType = leaver.LeavingType,
+                    });
+                }
+
 
                 foreach (var filePath in blameSnapshot.FilePaths)
                 {
@@ -187,6 +222,7 @@ namespace RelationalGit.Commands
                         TotalPullRequests = totalPullRequests.GetValueOrDefault(0)
                     });
 
+
                     /*bulkFileTouches.AddRange(availableCommitters.Select(q => new FileTouch()
                     {
                         CanonicalPath = filePath,
@@ -207,8 +243,10 @@ namespace RelationalGit.Commands
                 }
             }
 
+            _dbContext.BulkInsert(bulkSimulatedLeaver, new BulkConfig { BatchSize = 50000, BulkCopyTimeout = 0 });
             _dbContext.BulkInsert(bulkFileTouches, new BulkConfig { BatchSize = 50000, BulkCopyTimeout = 0 });
             _dbContext.BulkInsert(bulkFileKnowledgeable, new BulkConfig { BatchSize = 50000, BulkCopyTimeout = 0 });
+            
         }
 
         private void SaveLeaversAndFilesAtRisk(LossSimulation lossSimulation, KnowledgeDistributionMap knowledgeDistributioneMap, Dictionary<long, IEnumerable<SimulatedLeaver>> leavers)
@@ -399,7 +437,16 @@ namespace RelationalGit.Commands
 
             _commits = _dbContext.Commits.Where(q => !q.Ignore).ToArray();
 
-            _logger.LogInformation("{datetime}: Commits are loaded.", DateTime.Now);
+           _logger.LogInformation("{datetime}: Commits are loaded.", DateTime.Now);
+
+            String bugIndications = "%fix%,%bug%,%error%,%fixup%,%fail%";
+            var bugIndicationTerms = bugIndications.Split(',').Select(q => $"([Message] LIKE '{q}')").Aggregate((a, b) => a + " OR " + b);
+            var queryBugFix = $@"SELECT * From Commits Where ignore!='1' And ({bugIndicationTerms})";
+
+
+            _bugFixCommits = _dbContext.Commits.FromSql(queryBugFix).ToArray();
+
+            _logger.LogInformation("{datetime}: Bug Fix Commits are loaded.", DateTime.Now);
 
             _commitBlobBlames = _dbContext.CommitBlobBlames.Where(q => !q.Ignore).ToArray();
 
@@ -493,7 +540,10 @@ namespace RelationalGit.Commands
             lossSimulation.FirstPeriod,
             lossSimulation.SelectedReviewersType,
             lossSimulation.MinimumActualReviewersLength,
-            lossSimulation.MegaDevelopers);
+            lossSimulation.MegaDevelopers,
+            lossSimulation.MegaPullRequestSize,
+            _bugFixCommits
+            );
 
             return timeMachine;
         }
