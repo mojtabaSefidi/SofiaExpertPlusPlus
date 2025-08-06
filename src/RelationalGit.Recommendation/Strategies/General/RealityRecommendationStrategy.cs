@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using RelationalGit.Simulation;
 using System;
 
@@ -13,7 +13,19 @@ namespace RelationalGit.Recommendation
 
         protected override Simulation.PullRequestRecommendationResult RecommendReviewers(PullRequestContext pullRequestContext)
         {
-            return new Simulation.PullRequestRecommendationResult(pullRequestContext.ActualReviewers, Array.Empty<DeveloperKnowledge>(),null,null);
+            return new Simulation.PullRequestRecommendationResult(
+                pullRequestContext.ActualReviewers,
+                Array.Empty<DeveloperKnowledge>(),
+                null,
+                null,
+                pullRequestContext.ComputeDefectPronenessScore(),
+                //pullRequestContext.ComputeMaxExpertise(pullRequestContext.ActualReviewers),
+                //pullRequestContext.ComputeSumRevExpertise(pullRequestContext.ActualReviewers),
+                //pullRequestContext.ComputeMaxRevAutExpertise(pullRequestContext.ActualReviewers),
+                pullRequestContext.ComputeSumRevAutExpertise(pullRequestContext.ActualReviewers),
+                pullRequestContext.PullRequest.Number,
+                0,
+                0);
         }
     }
 }
