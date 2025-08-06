@@ -23,7 +23,7 @@ namespace RelationalGit.Simulation
         private bool? _hasLeaver;
         private bool? _isAbandon;
         private int? _hoardedFileCount;
-        
+
         private static Dictionary<string, (int TotalReviews, int TotalCommits)> _contributionsDic = new Dictionary<string, (int TotalReviews, int TotalCommits)>();
 
         private static CommitComparer _commitComparer = new CommitComparer();
@@ -31,33 +31,37 @@ namespace RelationalGit.Simulation
         private static PullRequestComparer _pullRequestComparer = new PullRequestComparer();
         private string[] _riskyFiles;
 
-        public DeveloperKnowledge[] ActualReviewers { get;   set; }
+        public DeveloperKnowledge[] ActualReviewers { get; set; }
 
-        public PullRequestFile[] PullRequestFiles { get;   set; }
+        public PullRequestFile[] PullRequestFiles { get; set; }
 
-        public PullRequest PullRequest { get;   set; }
+        public PullRequest PullRequest { get; set; }
 
-        public KnowledgeDistributionMap KnowledgeMap { get;   set; }
+        public KnowledgeDistributionMap KnowledgeMap { get; set; }
 
-        public Dictionary<string, string> CanononicalPathMapper { get;   set; }
+        public Dictionary<string, string> CanononicalPathMapper { get; set; }
 
-        public Period PullRequestPeriod { get;   set; }
+        public Period PullRequestPeriod { get; set; }
 
-        public ReadOnlyDictionary<string, Developer> Developers { get;   set; }
+        public ReadOnlyDictionary<string, Developer> Developers { get; set; }
 
-        public BlameSnapshot Blames { get;   set; }
+        public BlameSnapshot Blames { get; set; }
 
-        public DeveloperKnowledge[] PullRequestKnowledgeables { get;   set; }
+        public DeveloperKnowledge[] PullRequestKnowledgeables { get; set; }
 
-        public Dictionary<long, Period> Periods { get;   set; }
+        public Dictionary<long, Period> Periods { get; set; }
 
-        public HashSet<string> Hoarders { get;   set; } = null;
+        public HashSet<string> Hoarders { get; set; } = null;
 
-        public Dictionary<string,List<string>> _fileOwners { get; set; } = null;
+        public Dictionary<string, List<string>> _fileOwners { get; set; } = null;
 
         public List<long> Overlap { get; set; }
 
-       
+        public Data.CommittedChange[] BugFixCommitChanges { get; set; } = null;
+
+        public double? defectPronness { get; set; } = null;
+        public int? NumberOfExperts { get; set; } = null;
+
         public bool PullRequestFilesAreSafe
         {
             get
@@ -127,8 +131,8 @@ namespace RelationalGit.Simulation
         {
             if (Hoarders == null)
             {
-                
-                    FindHoarders();
+
+                FindHoarders();
             }
             return Hoarders.Any();
         }
@@ -136,7 +140,7 @@ namespace RelationalGit.Simulation
         private void FindHoarders()
         {
             Hoarders = new HashSet<string>();
-            _fileOwners = new Dictionary<string,List<string>>();
+            _fileOwners = new Dictionary<string, List<string>>();
             _hoardedFileCount = 0;
 
             var availableDevelopersOfPeriod = AvailableDevelopers.Select(q => q.NormalizedName).ToHashSet();
@@ -255,7 +259,7 @@ namespace RelationalGit.Simulation
                 _hasLeaver = false;
             }
         }
-      
+
         public DateTime? GetLastContribution(Developer developer)
         {
             if (developer.LastCommitDateTime == null)
@@ -282,7 +286,7 @@ namespace RelationalGit.Simulation
                 FindHoarders();
             }
 
-            if(_riskyFiles == null)
+            if (_riskyFiles == null)
             {
                 _riskyFiles = _fileOwners.Where(q => q.Value.Count() < riskOwnershipTreshold).Select(q => q.Key).ToArray();
             }
@@ -294,7 +298,7 @@ namespace RelationalGit.Simulation
         {
             if (_riskyFiles == null)
                 return null;
-            
+
             return _riskyFiles.Length > 0;
         }
 
@@ -304,18 +308,18 @@ namespace RelationalGit.Simulation
             //var lastMonth= PullRequest.CreatedAtDateTime.Value.Subtract(TimeSpan.FromDays(30));
             var totalContribution = GetTotalContributionsBestweenPeriods(lastYear, PullRequest.CreatedAtDateTime.Value);
             var developerTotalContribution = GetDeveloperTotalContributionsBestweenPeriods(lastYear, PullRequest.CreatedAtDateTime.Value, developer);
-          
-                    return ((developerTotalContribution.TotalReviews) + developerTotalContribution.TotalCommits)
-                / (double)((totalContribution.TotalReviews) + totalContribution.TotalCommits);
+
+            return ((developerTotalContribution.TotalReviews) + developerTotalContribution.TotalCommits)
+        / (double)((totalContribution.TotalReviews) + totalContribution.TotalCommits);
         }
-       
+
 
         private (int TotalReviews, int TotalCommits) GetDeveloperTotalContributionsBestweenPeriods(DateTime from, DateTime to, string developer)
         {
             var totalCommits = 0;
             var commits = KnowledgeMap.CommitBasedKnowledgeMap.GetDeveloperCommits(developer);
             var baselineCommit = new Commit() { AuthorDateTime = from };
-            var index = commits.BinarySearch(baselineCommit,_commitComparer);
+            var index = commits.BinarySearch(baselineCommit, _commitComparer);
 
             if (index < 0)
                 index = ~index;
@@ -323,10 +327,10 @@ namespace RelationalGit.Simulation
 
             int totalReviews = 0;
             var reviews = KnowledgeMap.ReviewBasedKnowledgeMap.GetDeveloperReviews(developer);
-          
+
             var baselinePullRequest = new PullRequest() { CreatedAtDateTime = from };
 
-            index = reviews.BinarySearch(baselinePullRequest,_pullRequestComparer);
+            index = reviews.BinarySearch(baselinePullRequest, _pullRequestComparer);
 
             if (index < 0)
                 index = ~index;
@@ -396,7 +400,7 @@ namespace RelationalGit.Simulation
             var reviews = KnowledgeMap.ReviewBasedKnowledgeMap.GetDeveloperReviews(developer);
 
             var related_reviews = reviews.Where(a => a.CreatedAtDateTime >= from);
-            if (related_reviews.Count()  != 0)
+            if (related_reviews.Count() != 0)
             {
                 var grouped_r = related_reviews.GroupBy(x => new { x.CreatedAtDateTime?.Year, x.CreatedAtDateTime?.Month }).ToArray();
                 var grouped_review = related_reviews.GroupBy(x => new { x.CreatedAtDateTime?.Year, x.CreatedAtDateTime?.Month }).Select(q => new { key = q.Key, count = q.Count() });
@@ -457,7 +461,7 @@ namespace RelationalGit.Simulation
 
             foreach (var committer in committers)
             {
-                var index = committer.Value.BinarySearch(baselineCommit,_commitComparer);
+                var index = committer.Value.BinarySearch(baselineCommit, _commitComparer);
 
                 if (index < 0)
                     index = ~index;
@@ -470,12 +474,12 @@ namespace RelationalGit.Simulation
 
             foreach (var reviewer in reviewers)
             {
-                var index = reviewer.Value.BinarySearch(baselinePullRequest,_pullRequestComparer);
+                var index = reviewer.Value.BinarySearch(baselinePullRequest, _pullRequestComparer);
 
                 if (index < 0)
                     index = ~index;
                 totalReviews += reviewer.Value.Count - index;
-            }       
+            }
 
             return (totalReviews, totalCommits);
         }
@@ -486,16 +490,16 @@ namespace RelationalGit.Simulation
             var lastYear = PullRequest.CreatedAtDateTime.Value.Subtract(TimeSpan.FromDays(365));
 
             var commitMonths = KnowledgeMap.CommitBasedKnowledgeMap.GetDeveloperCommits(reviewer)
-                .Where(q=>q.AuthorDateTime>=lastYear)
-                .Select(q=>q.AuthorDateTime.Month);
-            
+                .Where(q => q.AuthorDateTime >= lastYear)
+                .Select(q => q.AuthorDateTime.Month);
+
             var reviewMonths = KnowledgeMap.ReviewBasedKnowledgeMap.GetDeveloperReviews(reviewer)
                 .Where(q => q.CreatedAtDateTime >= lastYear)
                 .Select(q => q.CreatedAtDateTime.Value.Month);
 
             var numberOfContributedPeriodsSoFar = commitMonths.Union(reviewMonths).Count();
 
-            return numberOfContributedPeriodsSoFar / (double) 12.0;
+            return numberOfContributedPeriodsSoFar / (double)12.0;
         }
 
         public double _GetProbabilityOfStay(string reviewer, int numberOfPeriodsForCalculatingProbabilityOfStay)
@@ -528,7 +532,190 @@ namespace RelationalGit.Simulation
 
             return _totalContributionsInPeriodDic[periodId];
         }
+
+        public double ComputeCommitScore(string Developer)
+        {
+            var totalCommits = PullRequestKnowledgeables.Sum(q => q.NumberOfCommits);
+            var authorCommits = PullRequestKnowledgeables
+                                    .FirstOrDefault(q => q.DeveloperName == Developer)
+                                ?.NumberOfCommits
+                                ?? 0;
+
+            return totalCommits > 0
+                    ? (double)authorCommits / totalCommits
+                    : 0.0;
+        }
+
+        public double ComputeDeveloperBirdScore(string DeveloperName)
+        {
+            double score = 0.0;
+            int validFileCount = 0;
+
+            foreach (var pullRequestFile in PullRequestFiles)
+            {
+                var canonicalPath = CanononicalPathMapper.GetValueOrDefault(pullRequestFile.FileName);
+                if (canonicalPath == null)
+                    continue;
+
+                var fileExpertise = KnowledgeMap.PullRequestEffortKnowledgeMap.GetFileExpertise(canonicalPath);
+                var reviewerExpertise = KnowledgeMap.PullRequestEffortKnowledgeMap.GetReviewerExpertise(canonicalPath, DeveloperName);
+
+                // PR effort recency score
+                double scoreRecency = 0.0;
+                if (fileExpertise.RecentWorkDay == null)
+                    scoreRecency = 0.0;
+                else if (fileExpertise.RecentWorkDay == reviewerExpertise.RecentWorkDay 
+                    && reviewerExpertise.RecentWorkDay != null)
+                    scoreRecency = 1.0;
+                else if (fileExpertise.RecentWorkDay != null && reviewerExpertise.RecentWorkDay != null)
+                    scoreRecency = 1.0 / (Math.Abs((reviewerExpertise.RecentWorkDay - fileExpertise.RecentWorkDay)
+                        .Value.TotalDays) + 1);
+
+                // Commit-based metrics
+                var prCreationTime = PullRequest.CreatedAtDateTime.GetValueOrDefault(DateTime.MinValue);
+                var developerAuthorship = KnowledgeMap.CommitBasedKnowledgeMap.GetDeveloperAuthorship(canonicalPath, DeveloperName, prCreationTime);
+
+                double scoreCommitRecency = 0.0;
+                if (developerAuthorship.fileRecentCommit == null)
+                    scoreCommitRecency = 0.0;
+                else if (developerAuthorship.developerRecentCommit == developerAuthorship.fileRecentCommit 
+                    && developerAuthorship.developerRecentCommit != null)
+                    scoreCommitRecency = 1.0;
+                else if (developerAuthorship.developerRecentCommit != null && developerAuthorship.fileRecentCommit != null)
+                    scoreCommitRecency = 1.0 / (Math.Abs((developerAuthorship.developerRecentCommit - developerAuthorship.fileRecentCommit)
+                        .Value.TotalDays) + 1);
+
+
+                // Accumulate full Bird score (other components unchanged)
+                double scoreComments = fileExpertise.TotalComments == 0
+                                     ? 0.0
+                                     : reviewerExpertise.TotalComments / (double)fileExpertise.TotalComments;
+                double scoreWorkDays = fileExpertise.TotalWorkDays == 0
+                                     ? 0.0
+                                     : reviewerExpertise.TotalWorkDays / (double)fileExpertise.TotalWorkDays;
+                double scoreCommits = developerAuthorship.fileTotalCommit == 0
+                                    ? 0.0
+                                    : developerAuthorship.developerTotalCommit / (double)developerAuthorship.fileTotalCommit;
+
+                score += scoreComments + scoreWorkDays + scoreRecency + scoreCommits + scoreCommitRecency;
+                validFileCount++;
+            }
+
+            return validFileCount > 0 ? score / (5 * validFileCount) : 0.0;
+        }
+        public double ComputeMaxExpertise(DeveloperKnowledge[] selectedReviewers)
+        {
+            if (PullRequestFiles.Count() == 0)
+            {
+                return 0;
+            }
+            Dictionary<string, double> expertDicNew = new Dictionary<string, double>();
+            foreach (var reviewer in selectedReviewers)
+            {
+                var val = ComputeDeveloperBirdScore(reviewer.DeveloperName);
+                if (val != 0)
+                {
+                    expertDicNew[reviewer.DeveloperName] = val;
+                }
+            }
+
+            return expertDicNew.Count() != 0 ? expertDicNew.Values.Max() : 0;
+        }
+
+        public double ComputeSumRevExpertise(DeveloperKnowledge[] selectedReviewers)
+        {
+            if (PullRequestFiles.Count() == 0)
+            {
+                return 0;
+            }
+
+            Dictionary<string, double> expertDicNew = new Dictionary<string, double>();
+            foreach (var reviewer in selectedReviewers)
+            {
+                var val = ComputeDeveloperBirdScore(reviewer.DeveloperName);
+                if (val != 0)
+                {
+                    expertDicNew[reviewer.DeveloperName] = val;
+                }
+            }
+
+            return expertDicNew.Count() != 0 ? expertDicNew.Values.Sum() : 0;
+
+        }
+
+
+        public double ComputeSumRevAutExpertise(DeveloperKnowledge[] selectedReviewers)
+        {
+            if (PullRequestFiles.Count() == 0)
+            {
+                return 0;
+            }
+
+            Dictionary<string, double> expertDicNew = new Dictionary<string, double>();
+            foreach (var reviewer in selectedReviewers)
+            {
+                var val = ComputeDeveloperBirdScore(reviewer.DeveloperName);
+                if (val != 0)
+                {
+                    expertDicNew[reviewer.DeveloperName] = val;
+                }
+            }
+
+            double reviewersSum = expertDicNew.Count() != 0 ? expertDicNew.Values.Sum() : 0;
+            double authorBirdExp = 0;
+            //const double epsilon = 1e-3; // Define epsilon constant
+
+            // Add null check for submitter name
+            if (!string.IsNullOrEmpty(PRSubmitterNormalizedName))
+            {
+                authorBirdExp = ComputeDeveloperBirdScore(PRSubmitterNormalizedName);
+            }
+
+            //return (reviewersSum) * (authorBirdExp + epsilon);
+            return reviewersSum + authorBirdExp;
+        }
+
+        public double ComputeMaxRevAutExpertise(DeveloperKnowledge[] selectedReviewers)
+        {
+            if (PullRequestFiles.Count() == 0)
+            {
+                return 0;
+            }
+
+            Dictionary<string, double> expertDicNew = new Dictionary<string, double>();
+            foreach (var reviewer in selectedReviewers)
+            {
+                var val = ComputeDeveloperBirdScore(reviewer.DeveloperName);
+                if (val != 0)
+                {
+                    expertDicNew[reviewer.DeveloperName] = val;
+                }
+            }
+
+            double reviewersMax = expertDicNew.Count() != 0 ? expertDicNew.Values.Max() : 0;
+            double authorBirdExp = 0;
+
+            // Add null check for submitter name
+            if (!string.IsNullOrEmpty(PRSubmitterNormalizedName))
+            {
+                authorBirdExp = ComputeDeveloperBirdScore(PRSubmitterNormalizedName);
+            }
+
+            return reviewersMax + authorBirdExp;
+        }
+
+        public double? ComputeDefectPronenessScore()
+        {
+            if (this.defectPronness != null)
+            {
+                return this.defectPronness;
+            }
+            this.defectPronness = this.PullRequest.DefectProneness;
+            return this.PullRequest.DefectProneness;
+        }
     }
+
+
 
     public class CommitComparer : IComparer<Commit>
     {
