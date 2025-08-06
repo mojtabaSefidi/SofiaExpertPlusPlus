@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using RelationalGit.Data;
@@ -115,7 +115,68 @@ namespace RelationalGit.Simulation
         {
             return _mapDeveloperCommit;
         }
-        //Fahimeh
+
+        public (int developerTotalCommit,
+                DateTime? developerRecentCommit,
+                int fileTotalCommit,
+                DateTime? fileRecentCommit)
+            GetDeveloperAuthorship(string filePath,
+                                string developerName,
+                                DateTime pullReqTime)
+        {
+            // Initialize outputs
+            int developerTotalCommit = 0;
+            DateTime? developerRecentCommit = null;
+            int fileTotalCommit = 0;
+            DateTime? fileRecentCommit = null;
+
+            // If the file isn't tracked at all, bail out
+            if (!_map.ContainsKey(filePath))
+                return (developerTotalCommit,
+                        developerRecentCommit,
+                        fileTotalCommit,
+                        fileRecentCommit);
+
+            var fileCommitDetails = _map[filePath];
+
+            // 1) Developer-specific stats, filtered:
+            if (fileCommitDetails.TryGetValue(developerName, out var devDetail))
+            {
+                // Only commits _before_ pullReqTime
+                var devFiltered = devDetail.Commits
+                                    .Where(c => c.AuthorDateTime < pullReqTime)
+                                    .ToList();
+
+                developerTotalCommit = devFiltered.Count;
+
+                if (developerTotalCommit > 0)
+                    developerRecentCommit = devFiltered
+                                            .Max(c => c.AuthorDateTime);
+            }
+
+            // 2) File-wide stats, filtered:
+            foreach (var devCommitDetail in fileCommitDetails.Values)
+            {
+                // Filter each developer’s commits by the same cut-off
+                var filtered = devCommitDetail.Commits
+                                .Where(c => c.AuthorDateTime < pullReqTime)
+                                .ToList();
+
+                fileTotalCommit += filtered.Count;
+
+                if (filtered.Any())
+                {
+                    var mostRecent = filtered.Max(c => c.AuthorDateTime);
+                    if (fileRecentCommit == null || mostRecent > fileRecentCommit)
+                        fileRecentCommit = mostRecent;
+                }
+            }
+
+            return (developerTotalCommit,
+                    developerRecentCommit,
+                    fileTotalCommit,
+                    fileRecentCommit);
+        }
 
         public int GetDeveloperCommitsOnFile(string normalizedName, string path, DateTime pullReqTime, DateTime Recent)
         {
