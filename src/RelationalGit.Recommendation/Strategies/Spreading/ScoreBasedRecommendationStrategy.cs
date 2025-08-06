@@ -123,6 +123,7 @@ namespace RelationalGit.Recommendation
 
             if (ShouldAddReviewer(pullRequestContext, strategies))
             {
+                
                 var selectedCandidatesLength = GetSelectedCandidatesLength(pullRequestContext, strategies, "add");
                 var selectedCandidates = GetTopCandidates(availableDevs, selectedCandidatesLength, pullRequestContext.ActualReviewers);
                 var newReviewerSet = pullRequestContext.ActualReviewers.Concat(selectedCandidates).ToArray();
@@ -130,19 +131,20 @@ namespace RelationalGit.Recommendation
                 result.Add((newReviewerSet, selectedCandidates));
                
             }
-            if (ShouldReplaceReviewer(pullRequestContext, strategies) || (ShouldFarReplaceReviewer(pullRequestContext, strategies) && !pullRequestContext.PullRequestFilesAreSafe)|| (ShouldHoarderReplace(pullRequestContext, strategies) && pullRequestContext.HasHoarder() && !ShouldAddReviewer(pullRequestContext, strategies)))
+
+            if ((ShouldReplaceReviewer(pullRequestContext, strategies) || ShouldFarReplaceReviewer(pullRequestContext, strategies) || ShouldHoarderReplace(pullRequestContext, strategies)) && !ShouldAddReviewer(pullRequestContext, strategies))
             {
+
                 var selectedCandidatesLength = GetSelectedCandidatesLength(pullRequestContext, strategies, "replace");
                 var numberOfReplacements = Math.Min(availableDevs.Length, selectedCandidatesLength);
                 numberOfReplacements = Math.Min(actualReviewersLength, numberOfReplacements);
-
                 var actualReviewersCombination = GetCombinations(actualReviewersLength, numberOfReplacements);
 
                 var reviewerSet = new HashSet<string>();
                 var PRID = pullRequestContext.PullRequest.Number;
                 if (IsRandomReplacement(pullRequestContext, strategies))
                 {
-                    
+
                     var selectedActualCombination = new int[1];
                     if (SimulationType == "Random")
                     {
@@ -177,6 +179,7 @@ namespace RelationalGit.Recommendation
 
                                 var replacedReviewer = actualReviewersArray.Where(x => !SelectedReviewersArray.Contains(x)).ToArray();
 
+
                                 string[] actualList = new string[pullRequestContext.ActualReviewers.Count()];
                                 var index = 0;
                                 foreach (var rev in pullRequestContext.ActualReviewers)
@@ -186,9 +189,13 @@ namespace RelationalGit.Recommendation
                                 }
                                 indexArray[0] = Array.IndexOf(actualList, replacedReviewer.FirstOrDefault());
 
+
                                 if (indexArray[0] == -1)
                                 {
+                                    
+                                    
                                     var SortedCandidates = actualRecommendationResults.Where(result => result.PullRequestNumber == PRID).First().SortedCandidates;
+
                                     if (SortedCandidates != null)
                                     {
                                         var TopCandidate = SortedCandidates.Split(", ").ToArray().FirstOrDefault();
@@ -200,7 +207,6 @@ namespace RelationalGit.Recommendation
                                     {
                                         indexArray[0] = _rnd.Next(0, actualReviewersCombination.Count());
                                     }
-                                    
                                 }
                             }
                             else
@@ -216,7 +222,9 @@ namespace RelationalGit.Recommendation
                     if (replacement.SelectedCandidateKnowledge.Count() != 0)
                     {
                         result.Add((replacement.Reviewers, replacement.SelectedCandidateKnowledge));
+
                     }
+
                 }
                 else
                 {
@@ -260,7 +268,7 @@ namespace RelationalGit.Recommendation
             return strategies;
         }
 
-        private int GetSelectedCandidatesLength(PullRequestContext pullRequestContext, PullRequestReviewerSelectionStrategy[] strategies,string policy)
+        private int GetSelectedCandidatesLength(PullRequestContext pullRequestContext, PullRequestReviewerSelectionStrategy[] strategies, string policy)
         {
             var length = _pullRequestReviewerSelectionDefaultStrategy.ActionArgument;
 
@@ -328,11 +336,11 @@ namespace RelationalGit.Recommendation
 
             if (strategies.Length == 0)
             {
-                result = _pullRequestReviewerSelectionDefaultStrategy.Action.Contains("random");
+                result = _pullRequestReviewerSelectionDefaultStrategy.Action.Contains("random") || _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("addDefect");
             }
             else
             {
-                result = strategies.Any(q => q.Action == "replacerandom" || q.Action == "farreplacerandom");
+                result = strategies.Any(q => q.Action == "replacerandom" || q.Action == "farreplacerandom" || q.Action.StartsWith("addDefect"));
             }
 
             return result;
@@ -356,11 +364,11 @@ namespace RelationalGit.Recommendation
 
             if (strategies.Length == 0)
             {
-                result = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("replace");
+                result = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("replace") || _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("addDefect");
             }
             else
             {
-                result = strategies.Any(q => q.Action.StartsWith("replace"));
+                result = strategies.Any(q => q.Action.StartsWith("replace") || q.Action.StartsWith("addDefect")) ;
             }
 
             return result;
@@ -376,11 +384,11 @@ namespace RelationalGit.Recommendation
 
             if (strategies.Length == 0)
             {
-                result = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("farreplace");
+                result = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("farreplace") && !pullRequestContext.PullRequestFilesAreSafe;
             }
             else
             {
-                result = strategies.Any(q => q.Action.StartsWith("farreplace"));
+                result = strategies.Any(q => q.Action.StartsWith("farreplace")) && !pullRequestContext.PullRequestFilesAreSafe;
             }
 
             return result;
@@ -396,10 +404,11 @@ namespace RelationalGit.Recommendation
             if (strategies.Length == 0)
             {
                 result = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("addAndReplace") || _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("addHoarded");
+                result = result && pullRequestContext.HasHoarder();
             }
             else
             {
-                result = strategies.Any(q => q.Action.StartsWith("addAndReplace") || q.Action.StartsWith("addHoarded"));
+                result = strategies.Any(q => q.Action.StartsWith("addAndReplace") || q.Action.StartsWith("addHoarded")) && pullRequestContext.HasHoarder() ;
             }
 
             return result;
@@ -407,61 +416,70 @@ namespace RelationalGit.Recommendation
 
         private bool ShouldAddReviewer(PullRequestContext pullRequestContext, PullRequestReviewerSelectionStrategy[] strategies)
         {
-            var result = false;
-            var leaver_result = false;
+            var add_risky = false;
+            var add_leaver = false;
             var add_abandon = false;
             var add_hoarded_k = false;
+            var add_defect = false;
 
             if (strategies.Length == 0)
             {
-                result =  _pullRequestReviewerSelectionDefaultStrategy.Action == "add";
-                leaver_result = _pullRequestReviewerSelectionDefaultStrategy.Action == "addleaver";
+                add_risky =  _pullRequestReviewerSelectionDefaultStrategy.Action == "add";
+                add_leaver = _pullRequestReviewerSelectionDefaultStrategy.Action == "addleaver";
                 add_abandon = _pullRequestReviewerSelectionDefaultStrategy.Action == "addAndReplace";
                 add_hoarded_k = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("addHoarded");
+                add_defect = _pullRequestReviewerSelectionDefaultStrategy.Action.StartsWith("addDefect");
 
             }
             else
             {
-                result = strategies.Any(q => q.Action == "add");
-                leaver_result = strategies.Any(q => q.Action == "addleaver");
+                add_risky = strategies.Any(q => q.Action == "add");
+                add_leaver = strategies.Any(q => q.Action == "addleaver");
                 add_abandon = strategies.Any(q => q.Action == "addAndReplace");            
                 add_hoarded_k = strategies.Any(q => q.Action.StartsWith("addHoarded"));            
-                }
-
-            if (result)
-            {
-
-                if (!_addOnlyToUnsafePullrequests.HasValue || !_addOnlyToUnsafePullrequests.Value)
-                    return true;
-
-                if (_addOnlyToUnsafePullrequests.Value && !pullRequestContext.PullRequestFilesAreSafe)
-                    return true;
+                add_defect = strategies.Any(q => q.Action.StartsWith("addDefect"));            
             }
-            else if (leaver_result)
-            {
-                if (!_addOnlyToUnsafePullrequests.HasValue || !_addOnlyToUnsafePullrequests.Value)
-                    return true;
 
-                if (_addOnlyToUnsafePullrequests.Value && pullRequestContext.PullHasLeaver)
-                    return true;
+            if (add_risky)
+            {
+
+                return (_addOnlyToUnsafePullrequests.Value && !pullRequestContext.PullRequestFilesAreSafe);
+                    
+            }
+            else if (add_leaver)
+            {
+ 
+                return (_addOnlyToUnsafePullrequests.Value && pullRequestContext.PullHasLeaver);
+
             }
             else if (add_abandon)
             {
 
-                if (!_addOnlyToUnsafePullrequests.HasValue || !_addOnlyToUnsafePullrequests.Value)
-                    return true;
+                return (_addOnlyToUnsafePullrequests.Value && pullRequestContext.PullRequestFilesAreAbandon);
 
-                if (_addOnlyToUnsafePullrequests.Value && pullRequestContext.PullRequestFilesAreAbandon)
-                    return true;
             }
             else if (add_hoarded_k)
             {
-                
-                if (!_addOnlyToUnsafePullrequests.HasValue || !_addOnlyToUnsafePullrequests.Value)
-                    return true;
-                
+
                 int k = int.Parse(_pullRequestReviewerSelectionDefaultStrategy.Action.Split('_')[1]);
                 if (_addOnlyToUnsafePullrequests.Value && pullRequestContext.PullRequestIsHoarded_K(k))
+                    return true;
+            }
+
+            else if (add_defect)
+            {
+
+                // dynamic method
+                double low = pullRequestContext.Periods[pullRequestContext.PullRequestPeriod.Id].dynLow;
+                double high = pullRequestContext.Periods[pullRequestContext.PullRequestPeriod.Id].dynHigh;
+
+                //  normal method
+                // double low = pullRequestContext.Periods[pullRequestContext.PullRequestPeriod.Id].normLow;
+                // double high = pullRequestContext.Periods[pullRequestContext.PullRequestPeriod.Id].normHigh;
+
+                double pd = double.Parse(_pullRequestReviewerSelectionDefaultStrategy.Action.Split('_')[1]) / 100.0;
+                double threshold = low + pd * (high - low);
+                if (pullRequestContext.ComputeDefectPronenessScore() > threshold)
                     return true;
             }
 
