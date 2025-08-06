@@ -12,6 +12,8 @@ namespace RelationalGit.KnowledgeShareStrategies
 
         public static string CHRev => "cHRev";
 
+        public static string AuthorshipCHRev => "AcHRev";
+
         public static string RandomRec => "RandomRec";
 
         public static string RetentionRec => "RetentionRec";
@@ -26,8 +28,12 @@ namespace RelationalGit.KnowledgeShareStrategies
 
         public static string ContributionRec => "ContributionRec";
 
+        public static string RAR => "RAR";
+        
+        public static string RARSofiaWL => "RARSofiaWL";
+        
         public static string WhoDoRec => "WhoDo";
-
+        
         public static string SofiaWLRec => "SofiaWL";
 
         public static string OwnerShipKnowledgeShare => "OwnerShip";
